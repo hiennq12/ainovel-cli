@@ -53,7 +53,7 @@ func (m *scriptedModel) Generate(_ context.Context, messages []agentcore.Message
 
 func TestDecidePlanStartDoesNotSendThinkingToChatModel(t *testing.T) {
 	m := &scriptedModel{outputs: []string{
-		`{"planner":"architect_short","task":"规划短篇","reason":"篇幅较短"}`,
+		`{"planner":"architect_short","supplement":"","reason":"篇幅较短"}`,
 	}, rejectThinking: true}
 	if _, err := DecidePlanStart(t.Context(), m, "sys", "写一部短篇", ""); err != nil {
 		t.Fatalf("decide: %v", err)
@@ -68,7 +68,7 @@ func TestDecidePlanStartDoesNotSendThinkingToChatModel(t *testing.T) {
 
 func TestDecidePromptContractAppendsSchema(t *testing.T) {
 	m := &scriptedModel{outputs: []string{
-		`{"planner":"architect_short","task":"规划短篇","reason":"篇幅较短"}`,
+		`{"planner":"architect_short","supplement":"","reason":"篇幅较短"}`,
 	}}
 	const semanticPrompt = "只根据需求判断规划方式。"
 	if _, err := DecidePlanStart(t.Context(), m, semanticPrompt, "写一部短篇", ""); err != nil {
@@ -113,7 +113,7 @@ func (m *failingThenValidModel) Generate(context.Context, []agentcore.Message, [
 	return &agentcore.LLMResponse{Message: agentcore.Message{
 		Role: agentcore.RoleAssistant,
 		Content: []agentcore.ContentBlock{agentcore.TextBlock(
-			`{"planner":"architect_short","task":"规划短篇","reason":"篇幅较短"}`)},
+			`{"planner":"architect_short","supplement":"","reason":"篇幅较短"}`)},
 	}}, nil
 }
 
@@ -126,14 +126,14 @@ func (m *failingThenValidModel) SupportsTools() bool { return true }
 func TestDecidePlanStart_ValidAndFeedbackRetry(t *testing.T) {
 	// 第一次输出非法(planner 错),第二次带围栏但合法——反馈重试 + JSON 提取都要工作。
 	m := &scriptedModel{outputs: []string{
-		`{"planner":"writer","task":"x","reason":"r"}`,
-		"```json\n{\"planner\":\"architect_short\",\"task\":\"写一个 20 章的悬疑短篇……\",\"reason\":\"用户显式要求短篇\"}\n```",
+		`{"planner":"writer","supplement":"","reason":"r"}`,
+		"```json\n{\"planner\":\"architect_short\",\"supplement\":\"\",\"reason\":\"用户显式要求短篇\"}\n```",
 	}}
 	d, err := DecidePlanStart(context.Background(), m, "sys", "20章悬疑短篇", "suspense")
 	if err != nil {
 		t.Fatalf("decide: %v", err)
 	}
-	if d.Planner != "architect_short" || !strings.Contains(d.Task, "悬疑") {
+	if d.Planner != "architect_short" || d.Reason != "用户显式要求短篇" {
 		t.Fatalf("裁定错误: %+v", d)
 	}
 	if got := atomic.LoadInt64(&m.idx); got != 2 {
@@ -448,7 +448,7 @@ func TestContractSchemasAreStrictReady(t *testing.T) {
 
 func TestDecideNativeSendsSchemaAndDecodesFullOutput(t *testing.T) {
 	m := &nativeModel{scriptedModel: &scriptedModel{outputs: []string{
-		`{"planner":"architect_short","task":"规划短篇","reason":"篇幅较短"}`,
+		`{"planner":"architect_short","supplement":"","reason":"篇幅较短"}`,
 	}}}
 	const semanticPrompt = "只根据需求判断规划方式。"
 	d, err := DecidePlanStart(t.Context(), m, semanticPrompt, "写一部短篇", "")

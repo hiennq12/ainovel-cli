@@ -27,6 +27,26 @@ var premiseHeadingAliases = map[string]string{
 	"本作为什么适合短篇/单卷收束": "短篇适配性",
 }
 
+// premiseHeadingAliasesVI 是 vi 提示词(assets/prompts/architect-*.md)要求的越南语标题,
+// 映射到同一套 canonical key。键为小写,查找前去掉括注与冒号后的说明。
+var premiseHeadingAliasesVI = map[string]string{
+	"thể loại và giọng điệu":       "题材和基调",
+	"định vị thể loại":             "题材定位",
+	"xung đột cốt lõi":             "核心冲突",
+	"mục tiêu nhân vật chính":      "主角目标",
+	"hướng kết cục":                "终局方向",
+	"vùng cấm sáng tác":            "写作禁区",
+	"điểm bán hàng khác biệt":      "差异化卖点",
+	"móc câu khác biệt":            "差异化钩子",
+	"cam kết cốt lõi":              "核心兑现承诺",
+	"động cơ câu chuyện":           "故事引擎",
+	"tuyến quan hệ/trưởng thành":   "关系/成长主线",
+	"lộ trình nâng cấp":            "升级路径",
+	"chuyển hướng trung kỳ":        "中段转折",
+	"mệnh đề kết cục":              "终局命题",
+	"tính phù hợp với truyện ngắn": "短篇适配性",
+}
+
 func parsePremiseSections(premise string) map[string]string {
 	lines := strings.Split(premise, "\n")
 	sections := make(map[string]string)
@@ -67,7 +87,16 @@ func canonicalPremiseHeading(line string) (string, bool) {
 	if title == "" {
 		return "", false
 	}
-	canonical, ok := premiseHeadingAliases[title]
+	if canonical, ok := premiseHeadingAliases[title]; ok {
+		return canonical, true
+	}
+	// vi 提示词列出的标题带说明(如 "Định vị thể loại (Độc giả mục tiêu…)"、
+	// "Móc câu khác biệt: …"),模型可能原样照抄,也可能只写短名。
+	short := title
+	if i := strings.IndexAny(short, "(（:："); i > 0 {
+		short = short[:i]
+	}
+	canonical, ok := premiseHeadingAliasesVI[strings.ToLower(strings.TrimSpace(short))]
 	return canonical, ok
 }
 

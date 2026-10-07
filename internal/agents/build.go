@@ -129,6 +129,8 @@ func BuildWorkers(
 		tools.NewPlanChapterTool(store),
 		tools.NewResolveOutlineFeedbackTool(store),
 		tools.NewAuditFoundationTool(store),
+		// 开书需求原文:foundation 是压缩版,扩弧/续卷/修订时回读原文防长线漂移。
+		tools.NewReadBriefTool(store),
 	}
 	writerTools := []agentcore.Tool{
 		contextTool,

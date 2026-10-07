@@ -322,7 +322,8 @@ func commandRegistryInstance() commandRegistry {
 			Group:       "writing",
 			Usage:       "/export [đường-dẫn] [from=N] [to=M] [--overwrite]",
 			Description: "Xuất các chương đã hoàn thành ra tệp TXT hoặc EPUB",
-			AutoExecute: true,
+			// Không AutoExecute: chọn gợi ý chỉ điền "/export " để người dùng nhập
+			// đường dẫn / from / to trước khi Enter lần hai.
 			Run: func(m Model, args []string) (tea.Model, tea.Cmd) {
 				cmd, err := startExport(m.runtime, args)
 				if err != nil {

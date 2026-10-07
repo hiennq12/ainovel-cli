@@ -65,6 +65,12 @@ var (
 	cjkFragmentRe = regexp.MustCompile(`[\p{Han}\x{3000}-\x{303f}\x{ff01}-\x{ff5e}]+`)
 )
 
+// CJKFragments trả về các đoạn chữ Hán / dấu câu CJK liền nhau trong text, theo thứ tự xuất hiện.
+// Dùng chung với các chốt chặn ngoài lint (vd. save_review) để cùng một định nghĩa "lẫn chữ Hán".
+func CJKFragments(text string) []string {
+	return cjkFragmentRe.FindAllString(text, -1)
+}
+
 // appendScriptMixing 报告正文里「另一种文字」的混入片段。
 //
 // 哪种文字算混入由正文自身决定，不读配置：中文正文里裸混 "pattern" 是缺陷，
@@ -76,7 +82,7 @@ var (
 // 写错也不会失效。合法外来词（品牌名/缩写）仍会命中——warning 级事实，由评审裁定。
 func appendScriptMixing(vs []Violation, text string) []Violation {
 	latin := latinFragmentRe.FindAllString(text, -1)
-	han := cjkFragmentRe.FindAllString(text, -1)
+	han := CJKFragments(text)
 
 	// 比的是「汉字个数」与「拉丁词个数」，不是两边的字符数：一个汉字约等于一个词，
 	// 而一个拉丁词有好几个字母。按字符数比，中文正文里混几个 "pattern"/"DNA"

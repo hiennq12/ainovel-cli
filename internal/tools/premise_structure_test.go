@@ -119,3 +119,29 @@ func TestPremiseStructureShortAcceptsLegacyHeadingAlias(t *testing.T) {
 		t.Fatalf("expected short template_ready, got %+v", structure)
 	}
 }
+
+func TestParsePremiseSectionsVietnameseHeadings(t *testing.T) {
+	premise := `# Tiền đề cốt truyện
+
+## Thể loại và giọng điệu
+Trinh thám tâm lý.
+
+## Định vị thể loại (Độc giả mục tiêu, điểm tiêu thụ cốt lõi)
+Độc giả 20–40 tuổi.
+
+## Móc câu khác biệt: Điểm độc đáo nhất đáng để độc giả theo dõi cuốn sách này
+Ông già tự đặt lịch dọn nhà cho chính mình.
+
+## Tuyến quan hệ/trưởng thành
+Duy và mẹ.
+`
+	sections := parsePremiseSections(premise)
+	for _, key := range []string{"题材和基调", "题材定位", "差异化钩子", "关系/成长主线"} {
+		if sections[key] == "" {
+			t.Fatalf("越南语标题 %s 未被解析, got %+v", key, sections)
+		}
+	}
+	if _, ok := canonicalPremiseHeading("## Một tiêu đề lạ"); ok {
+		t.Fatal("未知标题不应被识别")
+	}
+}

@@ -691,7 +691,7 @@ func TestEngine_RetriesUnfinishedPlanStart(t *testing.T) {
 	var arbCalls atomic.Int32
 	arb := &scriptedChatModel{fn: func([]agentcore.Message) agentcore.Message {
 		if arbCalls.Add(1) == 1 {
-			return testTextMsg(`{"planner":"architect_long","task":"围绕凡人修仙规划三卷框架","reason":"长篇修仙题材"}`)
+			return testTextMsg(`{"planner":"architect_long","supplement":"差异化方向:凡人视角","reason":"长篇修仙题材"}`)
 		}
 		return testTextMsg(`{"action":"abort","dispatch":null,"reason":"规划师空转,停机"}`)
 	}}
@@ -716,6 +716,10 @@ func TestEngine_RetriesUnfinishedPlanStart(t *testing.T) {
 	}
 	if meta.PlanStart.Planner != "architect_long" || meta.PlanStart.RawPrompt != "凡人修仙" || meta.PlanStart.DecisionID == "" {
 		t.Fatalf("PlanStartRecord 字段不完整: %+v", meta.PlanStart)
+	}
+	// 规划师任务由宿主拼装:需求原文 + 裁定补充,不经模型转述。
+	if !strings.Contains(meta.PlanStart.PlannerTask, "凡人修仙") || !strings.Contains(meta.PlanStart.PlannerTask, "差异化方向:凡人视角") {
+		t.Fatalf("PlannerTask 必须含需求原文与补充: %q", meta.PlanStart.PlannerTask)
 	}
 	recs, err := st.Decisions.Recent(10)
 	if err != nil {

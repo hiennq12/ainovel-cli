@@ -52,6 +52,11 @@ func scanSources(root string) ([]scannedSource, error) {
 		if err != nil {
 			return err
 		}
+		// File mẫu chưa dán văn bản: bỏ qua thay vì để một lượt phân tích rỗng
+		// làm hỏng cả lần /simulate.
+		if strings.TrimSpace(string(data)) == "" {
+			return nil
+		}
 		info, err := entry.Info()
 		if err != nil {
 			return err

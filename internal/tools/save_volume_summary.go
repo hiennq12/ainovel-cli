@@ -58,6 +58,14 @@ func (t *SaveVolumeSummaryTool) Execute(_ context.Context, args json.RawMessage)
 	if strings.TrimSpace(a.Title) == "" || strings.TrimSpace(a.Summary) == "" {
 		return nil, fmt.Errorf("title and summary are required: %w", errs.ErrToolArgs)
 	}
+	// Chốt chặn chữ Hán (cjk_guard.go): tóm tắt quyển được nạp lại vào ngữ cảnh writer.
+	last, err := lastCompletedChapter(t.store)
+	if err != nil {
+		return nil, err
+	}
+	if err := rejectCJKLeak(t.store, t.Name(), append([]string{a.Title, a.Summary}, a.KeyEvents...), 1, last); err != nil {
+		return nil, err
+	}
 	volSummary := domain.VolumeSummary{
 		Volume:    a.Volume,
 		Title:     a.Title,

@@ -88,6 +88,9 @@ func (t *SaveArcSummaryTool) Execute(_ context.Context, args json.RawMessage) (j
 	if err := validateArcSummaryStyleRules(a.StyleRules); err != nil {
 		return nil, err
 	}
+	if err := t.rejectArcSummaryCJKLeak(a.Title, a.Summary, a.KeyEvents, a.CharacterSnapshots, a.StyleRules); err != nil {
+		return nil, err
+	}
 	for i := range a.CharacterSnapshots {
 		a.CharacterSnapshots[i].Volume = a.Volume
 		a.CharacterSnapshots[i].Arc = a.Arc
@@ -178,6 +181,31 @@ func (t *SaveArcSummaryTool) arcSummaryReplay(
 		return false, fmt.Errorf("第 %d 卷第 %d 弧摘要已存在但关联工件不同，拒绝覆盖: %w", summary.Volume, summary.Arc, errs.ErrToolConflict)
 	}
 	return true, nil
+}
+
+// rejectArcSummaryCJKLeak áp chốt chặn chữ Hán (cjk_guard.go): tóm tắt cung, snapshot nhân vật
+// và quy tắc văn phong đều được nạp lại vào ngữ cảnh writer ở các cung sau.
+func (t *SaveArcSummaryTool) rejectArcSummaryCJKLeak(
+	title, summary string,
+	keyEvents []string,
+	snapshots []domain.CharacterSnapshot,
+	style *arcSummaryStyleRules,
+) error {
+	texts := append([]string{title, summary}, keyEvents...)
+	for _, snap := range snapshots {
+		texts = append(texts, snap.Name, snap.Status, snap.Power, snap.Motivation, snap.Relations)
+	}
+	texts = append(texts, style.Prose...)
+	texts = append(texts, style.Taboos...)
+	for _, voice := range style.Dialogue {
+		texts = append(texts, voice.Name)
+		texts = append(texts, voice.Rules...)
+	}
+	last, err := lastCompletedChapter(t.store)
+	if err != nil {
+		return err
+	}
+	return rejectCJKLeak(t.store, t.Name(), texts, 1, last)
 }
 
 type arcSummaryStyleRules struct {

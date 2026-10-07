@@ -565,7 +565,7 @@ func TestFinalizeContextPayloadReportsAppliedTrimming(t *testing.T) {
 			"style_stats": map[string]any{"chapters": 20},
 		},
 	}
-	raw, err := finalizeContextPayload(result, 3, 400)
+	raw, err := finalizeContextPayload(result, 3, 400, &contextTextZH)
 	if err != nil {
 		t.Fatal(err)
 	}

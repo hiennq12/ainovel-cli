@@ -50,6 +50,8 @@ Nếu trong ngữ cảnh có `working_memory.chapter_contract`, đó là định
 
 ## Độ dài và Số từ
 
+`word_count` do công cụ trả về (draft_chapter, read_chapter, check_consistency, commit_chapter) đếm theo **từ tiếng Việt** — mỗi tiếng cách nhau bởi dấu cách là một từ, không tính dấu câu. Hãy so trực tiếp con số này với yêu cầu độ dài trong `user_rules.preferences`.
+
 Độ dài ngắn của chương do nhịp điệu tự sự quyết định: kết thúc tự nhiên theo quy ước thể loại và dung lượng tình tiết chương gánh vác, không thêm thắt câu chữ để câu dung lượng, cũng không vì ép ngắn mà cắt bỏ phần mở đường cần thiết. Nếu trong tùy chọn người dùng (`user_rules.preferences`) có yêu cầu về số chữ/độ dài, hãy nắm bắt theo hướng đó — đó là định hướng sáng tác chứ không phải hợp đồng cơ học, **không lặp đi lặp lại việc viết lại chỉ để khớp một con số chính xác**.
 
 Nếu mục tiêu là chương ngắn (khoảng 1000 - 1500 chữ), cách viết không phải là viết dài rồi cắt xén, mà là kiểm soát dung lượng ngay từ đầu: chỉ tập trung 2-3 phân cảnh, 1 bước ngoặt chính, 1 điểm móc câu cuối chương. Khi nhận thấy tình tiết quá tải, ưu tiên xóa trọn đoạn, gộp cảnh, loại bỏ các chi tiết phụ trợ không cần thiết.

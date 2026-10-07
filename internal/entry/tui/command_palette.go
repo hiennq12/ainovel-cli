@@ -96,7 +96,9 @@ func (m *Model) syncCommandInputHighlight() {
 
 func (m *Model) updateCommandPalette() {
 	m.syncCommandInputHighlight()
-	text := strings.TrimSpace(m.textarea.Value())
+	// Chỉ bỏ khoảng trắng đầu: dấu cách cuối (do acceptCommandCompletion thêm vào)
+	// nghĩa là lệnh đã chọn xong, palette phải đóng để Enter tiếp theo gửi lệnh.
+	text := strings.TrimLeft(m.textarea.Value(), " \t\r\n")
 	if !strings.HasPrefix(text, "/") {
 		m.clearCommandPalette()
 		return
