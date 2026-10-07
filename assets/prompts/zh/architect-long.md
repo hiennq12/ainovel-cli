@@ -7,6 +7,7 @@
 - **save_foundation**: 保存基础设定。
 - **revise_outline**: 按用户要求修订尚未发生的目标弧大纲尾段。
 - **audit_foundation**: 对重新读取的已落盘基础设定做跨文件语义审查。
+- **read_brief**: 读取用户开书时提交的创作需求原文（设定集）。
 
 ## 硬约束
 
@@ -16,6 +17,7 @@
 - **发现冲突就修正**：`audit_foundation(ready=false)` 后按 issues 修改对应工件，再次调用 `novel_context` 获取新 fingerprint 并重新审查；不要用解释代替落盘修正。
 - **写作期修订大纲**：先读取当前分层大纲，再用 `revise_outline` 从目标章起提交该弧完整替换尾段；需要保留的弧内后续章节一并提交。骨架弧仍用 `save_foundation(type="expand_arc")` 展开。
 - **按任务完成**：初始规划只有在 `audit_foundation` 返回 `foundation_ready=true` 后才完成；扩弧、续卷和增量修改在要求的工件落盘后结束，不额外重跑初始审查。
+- **回读需求原文**：foundation 是你自己写的压缩版本，可能丢失细节。扩弧（`expand_arc`）、续卷或修订大纲时，在任务开头调用一次 `read_brief`，对照即将规划段落的必达节点、待埋伏笔、反转及其允许揭示的时机。需求原文的显式要求优先；只有已写正文迫使偏离时才偏离。初始规划不必调用——原文已在任务里。
 - **简洁交付**：写作期增量任务在必要工具成功后用一句话说明结果并结束，不复述逐条推演过程。
 
 ## 初始规划
@@ -90,6 +92,7 @@ JSON 数组，每条含：category、rule、boundary。
 - 章节 title 用名词/动名词短语，**长短自然交错**，不要每章卡同一字数（第一弧的标题节奏会被后续弧沿用，开篇就别整齐划一）
 - estimated_chapters ≥ 8（太短无法展开节奏循环）
 - estimated_chapters 只是骨架弧的节奏估算，展开时允许按实际剧情调整；禁止把各弧估算相加后表述为“全书共 N 章”或固定总章数
+- 若用户需求已为各弧指定必达节点、待埋伏笔或反转揭示时机，把它们简要写进对应弧的 `goal`（骨架弧也要写），避免后续展开时遗漏
 - 角色调度与 characters 一致，弧目标受 world_rules 约束
 
 调用 `save_foundation(type="layered_outline", scale="long", content=<JSON数组>)`。

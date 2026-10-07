@@ -29,15 +29,15 @@ type mdLabels struct {
 	hook           string
 	scenes         string
 
-	timeline         string
-	foreshadow       string
-	resolvedAtFmt    string
-	plantedAtFmt     string
-	relationships    string
-	atChapterFmt     string
-	worldRules       string
-	rule             string
-	boundary         string
+	timeline      string
+	foreshadow    string
+	resolvedAtFmt string
+	plantedAtFmt  string
+	relationships string
+	atChapterFmt  string
+	worldRules    string
+	rule          string
+	boundary      string
 }
 
 var labelsZH = mdLabels{

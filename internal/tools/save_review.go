@@ -78,6 +78,9 @@ func (t *SaveReviewTool) Execute(_ context.Context, args json.RawMessage) (json.
 	if err != nil {
 		return nil, err
 	}
+	if err := t.rejectReviewCJKLeak(r, boundary); err != nil {
+		return nil, err
+	}
 	reviewOutcome, err := reviewFlow(r.Verdict)
 	if err != nil {
 		return nil, err
@@ -261,6 +264,27 @@ func (t *SaveReviewTool) normalizeReviewEntry(r *domain.ReviewEntry) (*store.Arc
 	}
 	r.AffectedChapters = derived
 	return boundary, nil
+}
+
+// rejectReviewCJKLeak áp chốt chặn chữ Hán (cjk_guard.go) lên mọi trường văn bản của review.
+// Ngoại lệ trích nguyên văn chỉ xét các chương thuộc phạm vi review.
+func (t *SaveReviewTool) rejectReviewCJKLeak(r domain.ReviewEntry, boundary *store.ArcBoundary) error {
+	from, to := r.Chapter, r.Chapter
+	switch r.Scope {
+	case "global":
+		from = 1
+	case "arc":
+		from, to = boundary.StartChapter, boundary.EndChapter
+	}
+	texts := []string{r.Summary, r.ContractNotes}
+	texts = append(texts, r.ContractMisses...)
+	for _, issue := range r.Issues {
+		texts = append(texts, issue.Type, issue.Description, issue.Evidence, issue.Suggestion)
+	}
+	for _, dim := range r.Dimensions {
+		texts = append(texts, dim.Dimension, dim.Comment)
+	}
+	return rejectCJKLeak(t.store, t.Name(), texts, from, to)
 }
 
 func uniqueSortedChapters(chapters []int) []int {

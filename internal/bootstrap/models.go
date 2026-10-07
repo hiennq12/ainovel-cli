@@ -363,11 +363,33 @@ func createModelFromConfig(providerKey, model string, pc ProviderConfig, cache m
 		return m, nil
 	}
 
+	var chat agentcore.ChatModel
+	var err error
+	if header := strings.TrimSpace(pc.SessionHeader); header != "" {
+		chat, err = newSessionHeaderModel(func(sessionID string) (agentcore.ChatModel, error) {
+			return buildChatModel(providerKey, model, pc, header, sessionID)
+		})
+	} else {
+		chat, err = buildChatModel(providerKey, model, pc, "", "")
+	}
+	if err != nil {
+		return nil, err
+	}
+	cache[cacheKey] = chat
+	return chat, nil
+}
+
+// buildChatModel dựng một client mới; sessionID khác rỗng thì gửi kèm header
+// session (xem session_header.go).
+func buildChatModel(providerKey, model string, pc ProviderConfig, sessionHeader, sessionID string) (agentcore.ChatModel, error) {
 	providerType, err := pc.ProviderType(providerKey)
 	if err != nil {
 		return nil, fmt.Errorf("解析 provider 类型失败: %w", err)
 	}
 	providerExtra := cloneMap(pc.Extra)
+	if sessionID != "" {
+		providerExtra = withSessionHeader(providerExtra, sessionHeader, sessionID)
+	}
 	if pc.API != "" {
 		if providerExtra == nil {
 			providerExtra = make(map[string]any, 1)
@@ -390,7 +412,12 @@ func createModelFromConfig(providerKey, model string, pc ProviderConfig, cache m
 	if err != nil {
 		return nil, fmt.Errorf("provider %s (%s): %w: %w", providerKey, providerType, errs.ErrProvider, err)
 	}
-	cache[cacheKey] = m
+	if mc, ok := pc.ModelConfig(model); ok && mc.MaxOutputTokens > 0 {
+		m.GetConfig().MaxTokens = mc.MaxOutputTokens
+	}
+	if stripsCacheMarkers(providerType) {
+		return noCacheMarkerModel{m}, nil
+	}
 	return m, nil
 }
 

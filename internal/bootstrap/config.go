@@ -66,6 +66,9 @@ type ProviderConfig struct {
 	// LocalAI/ollama 等自建慢推理首块可远超 5 分钟，按 provider 放宽即可，
 	// 不拖累其它通道的挂死检测（#79）。
 	StreamIdleTimeout string `json:"stream_idle_timeout,omitempty"`
+	// SessionHeader là tên header nhận một session ID riêng cho mỗi lượt worker
+	// (vd. "x-opencode-session" của OpenCode Go). Để trống = không gửi.
+	SessionHeader string `json:"session_header,omitempty"`
 }
 
 // ModelConfig 描述某个 provider 下可切换的模型及其可选上下文窗口。
@@ -79,6 +82,10 @@ type ModelConfig struct {
 	// 支持（请求被拒绝时原样暴露，不静默降级）；false=强制走 prompt contract。
 	// 自定义代理与聚合网关的能力以用户声明为准，程序不探测。
 	JSONSchema *bool `json:"json_schema,omitempty"`
+	// MaxOutputTokens là trần max_tokens gửi kèm mỗi request; 0 = dùng mặc định
+	// của agentcore (65536). Model cũ như gpt-4o-mini (16384) cần khai báo, nếu
+	// không provider sẽ từ chối với HTTP 400 "max_tokens is too large".
+	MaxOutputTokens int `json:"max_output_tokens,omitempty"`
 }
 
 func (m *ModelConfig) UnmarshalJSON(data []byte) error {
@@ -87,6 +94,7 @@ func (m *ModelConfig) UnmarshalJSON(data []byte) error {
 		m.Name = legacy
 		m.ContextWindow = 0
 		m.JSONSchema = nil
+		m.MaxOutputTokens = 0
 		return nil
 	}
 	type modelConfigAlias ModelConfig
@@ -360,6 +368,7 @@ func validateProviderConfigText(name string, pc ProviderConfig) error {
 		{label: fmt.Sprintf("provider %q api", name), value: pc.API},
 		{label: fmt.Sprintf("provider %q api_key", name), value: pc.APIKey},
 		{label: fmt.Sprintf("provider %q base_url", name), value: pc.BaseURL},
+		{label: fmt.Sprintf("provider %q session_header", name), value: pc.SessionHeader},
 	}
 	for _, field := range fields {
 		if err := validateConfigText(field.label, field.value); err != nil {

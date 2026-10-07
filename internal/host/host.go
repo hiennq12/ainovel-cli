@@ -136,6 +136,10 @@ func New(cfg bootstrap.Config, bundle assets.Bundle, options ...NewOption) (*Hos
 
 	// 起后台 goroutine 从 OpenRouter 刷新模型元数据（窗口/价格），磁盘缓存 24h。
 	modelreg.StartPricingRefresh(modelreg.DefaultRegistry(), bootstrap.DefaultConfigDir())
+	// Giá gói OpenCode Go khác giá OpenRouter; chỉ tải khi có provider trỏ tới endpoint Go.
+	if usesOpenCodeGo(cfg) {
+		modelreg.StartOpenCodeGoPricingRefresh(bootstrap.DefaultConfigDir())
+	}
 
 	store := storepkg.NewStore(cfg.OutputDir)
 	// 派生 Markdown 的标签跟随作品语种：这些视图会被 novel_context 读回上下文，
@@ -272,6 +276,7 @@ func New(cfg bootstrap.Config, bundle assets.Bundle, options ...NewOption) (*Hos
 		failurePrompt:   bundle.Prompts.ArbiterFailure,
 		planStartPrompt: bundle.Prompts.ArbiterPlanStart,
 		style:           cfg.Style,
+		language:        bundle.Language,
 		// 同步重询:阻塞引擎循环一次裁定(数秒),换取"干预先于后续创作生效"。
 		reconsult: h.handleIntervention,
 		observer:  h.observer,
@@ -406,15 +411,16 @@ func (h *Host) StartPrepared(rawRequirement string) error {
 	if derr != nil {
 		return fmt.Errorf("启动裁定失败: %w", derr)
 	}
+	plannerTask := decision.PlannerTask(rawRequirement, h.bundle.Language)
 	if err := h.store.RunMeta.SetPlanStart(domain.PlanStartRecord{
-		RawPrompt: rawRequirement, Planner: decision.Planner, PlannerTask: decision.Task, DecisionID: rec.ID,
+		RawPrompt: rawRequirement, Planner: decision.Planner, PlannerTask: plannerTask, DecisionID: rec.ID,
 	}); err != nil {
 		return fmt.Errorf("记录启动裁定: %w", err)
 	}
 
 	h.emitEvent(Event{Time: time.Now(), Category: "SYSTEM",
 		Summary: fmt.Sprintf("开始创作（规划师: %s——%s）", decision.Planner, decision.Reason), Level: "info"})
-	if !h.startEngine(&flow.Instruction{Agent: decision.Planner, Task: decision.Task, Reason: decision.Reason}) {
+	if !h.startEngine(&flow.Instruction{Agent: decision.Planner, Task: plannerTask, Reason: decision.Reason}) {
 		return fmt.Errorf("Engine 已在运行或正在停止，无法启动新书")
 	}
 	return nil
@@ -1983,4 +1989,14 @@ func (h *Host) continueAfterImport(opts imp.Options) bool {
 // 只读到 Progress.CompletedChapters + 章节终稿 + 大纲 + premise 的一致快照。
 func (h *Host) Export(ctx context.Context, opts exp.Options) (*exp.Result, error) {
 	return exp.Run(ctx, exp.Deps{Store: h.store}, opts)
+}
+
+// usesOpenCodeGo báo config có provider nào trỏ tới endpoint OpenCode Go không.
+func usesOpenCodeGo(cfg bootstrap.Config) bool {
+	for _, p := range cfg.Providers {
+		if strings.Contains(strings.ToLower(p.BaseURL), "opencode.ai/zen/go") {
+			return true
+		}
+	}
+	return false
 }

@@ -14,8 +14,9 @@ import (
 
 // Store 是状态管理的组合根，持有所有子存储。
 type Store struct {
-	dir string
-	ios []*IO
+	dir  string
+	ios  []*IO
+	lang string
 
 	Progress       *ProgressStore
 	Book           *BookStore
@@ -87,10 +88,15 @@ func NewStore(dir string) *Store {
 // SetLanguage 设定作品语种（"vi" / "zh"），影响所有派生 Markdown 视图的标签。
 // 启动时设一次即可；未调用则按上游默认走中文。
 func (s *Store) SetLanguage(lang string) {
+	s.lang = lang
 	for _, x := range s.ios {
 		x.SetLanguage(lang)
 	}
 }
+
+// Language trả về ngôn ngữ tác phẩm đã đặt qua SetLanguage; chuỗi rỗng nếu chưa đặt
+// (khi đó mọi nhãn theo mặc định tiếng Trung của upstream).
+func (s *Store) Language() string { return s.lang }
 
 // Dir 返回输出根目录。
 func (s *Store) Dir() string { return s.dir }

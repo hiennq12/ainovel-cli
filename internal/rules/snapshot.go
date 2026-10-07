@@ -3,6 +3,7 @@ package rules
 import (
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 )
 
@@ -190,6 +191,66 @@ func SystemDefaults() Candidate {
 			},
 		},
 	}
+}
+
+// SystemDefaultsFor trả về baseline cơ học theo ngôn ngữ tác phẩm.
+//
+// Tiếng Việt chưa có danh sách từ cấm / từ dễ lặp riêng (chờ chốt): để trống, không mượn
+// danh sách tiếng Trung — chúng không bao giờ khớp văn tiếng Việt, chỉ đưa chữ Hán vào
+// ngữ cảnh model; chữ Hán lọt vào văn đã có Lint (cjk_leak) bắt.
+func SystemDefaultsFor(lang string) Candidate {
+	if lang == "vi" {
+		return Candidate{Source: "system_defaults", Structured: cloneStructured(systemDefaultsVI)}
+	}
+	return SystemDefaults()
+}
+
+// systemDefaultsVI: điền ForbiddenPhrases / FatigueWords tiếng Việt vào đây khi đã chốt danh sách.
+var systemDefaultsVI = Structured{}
+
+// WithoutHanEntries bỏ các mục chứa chữ Hán / dấu câu CJK khỏi forbidden_chars,
+// forbidden_phrases và fatigue_words; trả về true nếu có mục bị bỏ.
+//
+// Dùng cho tác phẩm tiếng Việt: các mục này thừa vì Lint (cjk_leak) đã báo mọi chữ Hán
+// lọt vào văn, nên bỏ đi không mất phép kiểm tra nào — chỉ ngừng đưa chữ Hán vào ngữ cảnh.
+func WithoutHanEntries(s Structured) (Structured, bool) {
+	out := s
+	changed := false
+	keep := func(in []string) []string {
+		var kept []string
+		for _, v := range in {
+			if len(CJKFragments(v)) > 0 {
+				changed = true
+				continue
+			}
+			kept = append(kept, v)
+		}
+		return kept
+	}
+	out.ForbiddenChars = keep(s.ForbiddenChars)
+	out.ForbiddenPhrases = keep(s.ForbiddenPhrases)
+	out.FatigueWords = nil
+	for word, limit := range s.FatigueWords {
+		if len(CJKFragments(word)) > 0 {
+			changed = true
+			continue
+		}
+		if out.FatigueWords == nil {
+			out.FatigueWords = make(map[string]int, len(s.FatigueWords))
+		}
+		out.FatigueWords[word] = limit
+	}
+	return out, changed
+}
+
+func cloneStructured(s Structured) Structured {
+	out := s
+	out.ForbiddenChars = slices.Clone(s.ForbiddenChars)
+	out.ForbiddenPhrases = slices.Clone(s.ForbiddenPhrases)
+	if s.FatigueWords != nil {
+		out.FatigueWords = cloneFatigue(s.FatigueWords)
+	}
+	return out
 }
 
 // sanitizeStructured 落实"空值/零值=字段缺失"：归一化器可能吐 genre:"" 这类占位

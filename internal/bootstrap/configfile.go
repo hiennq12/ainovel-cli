@@ -178,6 +178,9 @@ func mergeConfig(base, overlay Config) Config {
 			if len(v.Extra) > 0 {
 				existing.Extra = cloneMap(v.Extra)
 			}
+			if v.SessionHeader != "" {
+				existing.SessionHeader = v.SessionHeader
+			}
 			base.Providers[k] = existing
 		}
 	}

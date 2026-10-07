@@ -9,7 +9,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/voocel/agentcore/schema"
 	"github.com/voocel/ainovel-cli/internal/chapterfacts"
@@ -230,7 +229,7 @@ func (t *CommitChapterTool) Execute(_ context.Context, args json.RawMessage) (js
 	}
 	// 标题由引擎渲染：模型常漏标题行、写错级别或沿用规划期的错误章号。
 	content = domain.ApplyChapterHeading(content, a.Title, a.Chapter)
-	wordCount := utf8.RuneCountInString(content)
+	wordCount := domain.WordCount(content)
 
 	var pending domain.PendingCommit
 	if existingPending != nil {
@@ -538,7 +537,7 @@ func (t *CommitChapterTool) appendCommitCheckpoint(chapter int) error {
 // + 用户规则 Check（读本书快照的 structured；快照缺失退到内置默认，保证机械底线始终在）。
 func (t *CommitChapterTool) checkRules(text string, chapter int) []rules.Violation {
 	violations := rules.Lint(text)
-	structured := rules.SystemDefaults().Structured
+	structured := rules.SystemDefaultsFor(t.store.Language()).Structured
 	if snap, err := t.store.UserRules.Load(); err == nil && snap != nil {
 		structured = snap.Structured
 	}
@@ -572,7 +571,7 @@ func (t *CommitChapterTool) executeRewriteCommit(a commitArgs, progress *domain.
 		return nil, fmt.Errorf("第 %d 章返工提交缺少 draft_content，无法安全恢复: %w", chapter, errs.ErrToolConflict)
 	}
 	content = domain.ApplyChapterHeading(content, a.Title, chapter)
-	wordCount := utf8.RuneCountInString(content)
+	wordCount := domain.WordCount(content)
 
 	// 2. 正文或标题至少一项发生变化；标题打磨无需伪造正文改动。
 	if !recovering {

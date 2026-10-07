@@ -41,14 +41,14 @@ func (s *Service) normalizeOrDegrade(ctx context.Context, source, text string) r
 // Build 从静态来源（system_defaults + rules 文件 + 启动 prompt）归一化生成快照并落盘。
 // 开书/刷新时调用。startupPrompt 可空。
 func (s *Service) Build(ctx context.Context, startupPrompt string) (*rules.Snapshot, error) {
-	cands := []rules.Candidate{rules.SystemDefaults()}
+	cands := []rules.Candidate{rules.SystemDefaultsFor(s.store.Language())}
 	for _, rs := range rules.RawFileSources(s.rulesOpts) {
 		cands = append(cands, s.normalizeOrDegrade(ctx, rs.Label, rs.Text))
 	}
 	if strings.TrimSpace(startupPrompt) != "" {
 		cands = append(cands, s.normalizeOrDegrade(ctx, "startup_prompt", startupPrompt))
 	}
-	snap := rules.BuildSnapshot(cands)
+	snap, _ := s.forLanguage(rules.BuildSnapshot(cands))
 	if err := s.store.UserRules.Save(&snap); err != nil {
 		return nil, err
 	}
@@ -63,7 +63,17 @@ func (s *Service) GetOrBuild(ctx context.Context) (*rules.Snapshot, error) {
 		return nil, err
 	}
 	if cur != nil {
-		return cur, nil
+		// Snapshot cũ của tác phẩm tiếng Việt có thể đã gộp danh sách mặc định tiếng Trung:
+		// làm sạch một lần và ghi lại, không cần chuẩn hoá lại bằng LLM.
+		cleaned, changed := s.forLanguage(*cur)
+		if !changed {
+			return cur, nil
+		}
+		if err := s.store.UserRules.Save(&cleaned); err != nil {
+			return nil, err
+		}
+		slog.Info("Đã bỏ các mục chữ Hán khỏi luật của tác phẩm tiếng Việt", "module", "rules")
+		return &cleaned, nil
 	}
 	return s.Build(ctx, "")
 }
@@ -77,9 +87,20 @@ func (s *Service) AddRuntimeRule(ctx context.Context, text string) (*rules.Snaps
 		return nil, rules.Candidate{}, err
 	}
 	cand := s.normalizeOrDegrade(ctx, "runtime_update", text)
-	merged := rules.OverlaySnapshot(*cur, cand)
+	merged, _ := s.forLanguage(rules.OverlaySnapshot(*cur, cand))
 	if err := s.store.UserRules.Save(&merged); err != nil {
 		return nil, cand, err
 	}
 	return &merged, cand, nil
+}
+
+// forLanguage áp quy tắc theo ngôn ngữ tác phẩm lên snapshot. Tác phẩm tiếng Việt bỏ mọi
+// mục chữ Hán khỏi danh sách từ cấm / từ dễ lặp (xem rules.WithoutHanEntries).
+func (s *Service) forLanguage(snap rules.Snapshot) (rules.Snapshot, bool) {
+	if s.store.Language() != "vi" {
+		return snap, false
+	}
+	cleaned, changed := rules.WithoutHanEntries(snap.Structured)
+	snap.Structured = cleaned
+	return snap, changed
 }

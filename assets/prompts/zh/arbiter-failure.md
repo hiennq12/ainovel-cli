@@ -19,6 +19,7 @@ Worker 期间可能落了 plan/draft/edit 等中间产物，但它们不等于�
 
 - 从 facts 判断卡点：如缺项在 `foundation_missing` → reroute 给规划师补齐；重写队列头有问题 → reroute 给 editor 复核
 - 任务文本本身可能有歧义 → `reroute` 同一 agent 但改写更明确的 task
+- 卡住的 `agent` 是规划师 → reroute 仍保持**同一类型**（architect_short 仍派 architect_short，architect_long 仍派 architect_long）。规划师类型在开书时按篇幅选定；僵局不改变篇幅，换成另一类会搭错整本书的骨架。要破局就把 task 改写得更明确，不要换类型
 - 无法判断 → `abort`（宁可停下等人，不做无谓消耗）
 
 dispatch.agent 只能是 architect_long / architect_short / writer / editor。

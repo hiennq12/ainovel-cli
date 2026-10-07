@@ -15,6 +15,7 @@ import (
 	"github.com/voocel/agentcore/subagent"
 
 	"github.com/voocel/ainovel-cli/internal/arbiter"
+	"github.com/voocel/ainovel-cli/internal/bootstrap"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/errs"
 	"github.com/voocel/ainovel-cli/internal/flow"
@@ -34,6 +35,7 @@ type engine struct {
 	failurePrompt   string
 	planStartPrompt string // 启动裁定系统提示词:裁定从未完成时引擎据 StartPrompt 现场补裁
 	style           string // 风格名,补裁时传给 DecidePlanStart
+	language        string // 作品语种,补裁后拼装规划师任务的固定文案用
 	// reconsult 把过期干预送回 host 的完整裁定路径(持久化/审计/全量动作应用),
 	// 异步执行——engine 只丢弃过期派单,不自行做残缺的重新裁定。
 	reconsult func(text string)
@@ -358,15 +360,16 @@ func (e *engine) retryPlanStart(ctx context.Context, prompt string) *flow.Instru
 		e.pauseWithNotify(notify.KindPlanStart, "启动裁定失败,已暂停(请检查模型/网络配置后继续): "+derr.Error())
 		return nil
 	}
+	plannerTask := decision.PlannerTask(prompt, e.language)
 	if err := e.store.RunMeta.SetPlanStart(domain.PlanStartRecord{
-		RawPrompt: prompt, Planner: decision.Planner, PlannerTask: decision.Task, DecisionID: rec.ID,
+		RawPrompt: prompt, Planner: decision.Planner, PlannerTask: plannerTask, DecisionID: rec.ID,
 	}); err != nil {
 		e.pauseWithNotify(notify.KindPlanStart, "启动裁定无法落盘,已暂停: "+err.Error())
 		return nil
 	}
 	e.emitEvent(Event{Time: time.Now(), Category: "SYSTEM", Level: "info",
 		Summary: fmt.Sprintf("启动裁定已补齐(规划师: %s——%s)", decision.Planner, decision.Reason)})
-	return &flow.Instruction{Agent: decision.Planner, Task: decision.Task, Reason: decision.Reason}
+	return &flow.Instruction{Agent: decision.Planner, Task: plannerTask, Reason: decision.Reason}
 }
 
 // precheck 是原 ToolGate 的确定性化身:不合法的派发直接改写,无需教学文案。
@@ -493,6 +496,8 @@ func (e *engine) runWorker(ctx context.Context, inst *flow.Instruction) error {
 	runCtx := agentcore.WithToolProgress(ctx, func(p agentcore.ProgressPayload) {
 		e.observer.workerProgress(p)
 	})
+	// Mỗi lượt worker là một cuộc hội thoại riêng với provider (session_header).
+	runCtx = bootstrap.WithModelSession(runCtx, bootstrap.NewModelSessionID())
 	_, err := e.workers.Run(runCtx, inst.Agent, inst.Task)
 	if err == nil {
 		// 成功即清失败追踪:同键的下一次失败重新享有"先重试一次"额度。

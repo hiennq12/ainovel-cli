@@ -2,6 +2,8 @@ package domain
 
 import (
 	"fmt"
+	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -27,7 +29,33 @@ func ShouldArcReview(isArcEnd, isVolumeEnd bool, volume, arc int) (bool, string)
 	return false, ""
 }
 
-// WordCount 按 rune 计算字数。
+// WordCount 计算章节字数。
+// 以中日韩文字为主的正文沿用按 rune 计数(与历史数据一致);
+// 越南语、英语等以空格分词的正文按词计数(越南语一个"tiếng"即一个词),
+// 否则 3000 字的越南语章节会被算成一万多字,误导 writer 提前收笔。
 func WordCount(content string) int {
-	return utf8.RuneCountInString(content)
+	cjk, words := 0, 0
+	for _, field := range strings.Fields(content) {
+		hasWordRune := false
+		for _, r := range field {
+			switch {
+			case isCJKRune(r):
+				cjk++
+			case unicode.IsLetter(r) || unicode.IsDigit(r):
+				hasWordRune = true
+			}
+		}
+		if hasWordRune {
+			words++
+		}
+	}
+	if cjk >= words {
+		return utf8.RuneCountInString(content)
+	}
+	return cjk + words
+}
+
+func isCJKRune(r rune) bool {
+	return unicode.Is(unicode.Han, r) || unicode.Is(unicode.Hiragana, r) ||
+		unicode.Is(unicode.Katakana, r) || unicode.Is(unicode.Hangul, r)
 }

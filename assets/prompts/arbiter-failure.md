@@ -19,6 +19,7 @@ Trong thời gian Worker chạy có thể đã lưu các sản phẩm trung gian
 
 - Căn cứ facts phán đoán điểm nghẽn: ví dụ thiếu mục trong `foundation_missing` → reroute cho Architect bổ sung; đầu hàng đợi viết lại có vấn đề → reroute cho Editor rà soát lại
 - Bản thân văn bản nhiệm vụ có thể có mơ hồ → `reroute` cho cùng agent nhưng viết lại nhiệm vụ rõ ràng hơn
+- `agent` đang bế tắc là một Kiến trúc sư → reroute vẫn giữ **đúng loại đó** (architect_short giữ architect_short, architect_long giữ architect_long). Loại Kiến trúc sư được chọn lúc mở truyện theo dung lượng; bế tắc không làm dung lượng thay đổi, đổi sang loại kia sẽ dựng sai khung truyện. Muốn gỡ bế tắc thì viết lại nhiệm vụ rõ hơn, đừng đổi loại
 - Không thể phán đoán → `abort` (thà dừng lại chờ người, không tiêu tốn vô ích)
 
 dispatch.agent chỉ có thể là: architect_long / architect_short / writer / editor.

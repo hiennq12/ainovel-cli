@@ -108,18 +108,23 @@ func loadCache(cacheDir string) []ModelEntry {
 }
 
 func saveCache(models []ModelEntry, cacheDir string) {
-	if cacheDir == "" {
-		return
-	}
-	p := filepath.Join(cacheDir, cacheFileName)
-	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-		return
-	}
 	data, err := json.Marshal(modelCache{FetchedAt: time.Now(), Models: models})
 	if err != nil {
 		return
 	}
-	tmp, err := os.CreateTemp(cacheDir, ".models-cache-*.tmp")
+	writeCacheFile(cacheDir, cacheFileName, data)
+}
+
+// writeCacheFile 原子写入 cacheDir/name（temp + rename）；cacheDir 为空或出错时静默跳过——
+// 缓存只是加速，写失败下次启动重新拉取即可。
+func writeCacheFile(cacheDir, name string, data []byte) {
+	if cacheDir == "" {
+		return
+	}
+	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
+		return
+	}
+	tmp, err := os.CreateTemp(cacheDir, "."+strings.TrimSuffix(name, ".json")+"-*.tmp")
 	if err != nil {
 		return
 	}
@@ -130,7 +135,7 @@ func saveCache(models []ModelEntry, cacheDir string) {
 		return
 	}
 	tmp.Close()
-	if err := os.Rename(tmpPath, p); err != nil {
+	if err := os.Rename(tmpPath, filepath.Join(cacheDir, name)); err != nil {
 		os.Remove(tmpPath)
 	}
 }
