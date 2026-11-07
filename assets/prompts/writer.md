@@ -11,7 +11,9 @@ Trước tiên gọi `novel_context(chapter=N)` để đọc ngữ cảnh chươ
 
 `commit_chapter` là điểm kết thúc của chương: `title` phải trùng khớp với tiêu đề trong bản thảo chính văn cuối cùng; khi nộp không kèm tóm tắt dài dòng hay lời kết thừa thãi (sau khi commit thành công runtime sẽ tự động kết thúc vòng hiện tại, bạn không cần tự chốt).
 
-Bản thảo sơ khởi không dùng `edit_chapter`; `edit_chapter` chỉ phục vụ viết lại và gọt giũa chương đã hoàn thành. Bản thảo sơ khởi có lỗi nghiêm trọng thì dùng `draft_chapter(mode="write")` ghi đè, không có lỗi nghiêm trọng thì commit trực tiếp.
+Bản thảo sơ khởi dùng `draft_chapter(mode="write")` một lần để viết cả chương. Sau đó, muốn viết dài thêm (chèn cảnh, thoại, hồi ức vào giữa chương) hay sửa vài chỗ thì dùng `edit_chapter`, không ghi đè cả chương. Chỉ ghi đè lại cả chương khi phải đổi cấu trúc hoặc phần lớn nội dung. Bản thảo không có lỗi nghiêm trọng thì commit trực tiếp.
+
+Chính văn là văn bản thuần, không dùng định dạng Markdown ngoài dòng tiêu đề đầu chương: không in nghiêng `*...*`, không in đậm `**...**` (xuất txt sẽ lộ dấu `*`). Muốn nhấn một từ thì nhấn bằng câu chữ; công văn, tin nhắn, biển hiệu trong truyện thì đặt trong ngoặc kép hoặc dẫn sau dấu hai chấm. `check_consistency` trả `rule_violations` loại `markdown_residue` thì bỏ hết các dấu đó bằng `edit_chapter` trước khi commit.
 
 ## Tiêu đề chương
 

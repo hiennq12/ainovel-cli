@@ -70,7 +70,7 @@ func TestEditChapterAppliesEdit(t *testing.T) {
 	}
 }
 
-func TestEditChapterRejectsIncompleteChapter(t *testing.T) {
+func TestEditChapterEditsIncompleteChapterDraft(t *testing.T) {
 	dir := t.TempDir()
 	s := store.NewStore(dir)
 	if err := s.Init(); err != nil {
@@ -80,33 +80,50 @@ func TestEditChapterRejectsIncompleteChapter(t *testing.T) {
 		t.Fatalf("InitProgress: %v", err)
 	}
 	enterEditWritingPhase(t, s)
-	original := "新章初稿必须整章覆盖。"
-	if err := s.Drafts.SaveDraft(2, original); err != nil {
+	if err := s.Drafts.SaveDraft(2, "开头。结尾钩子。"); err != nil {
 		t.Fatalf("SaveDraft: %v", err)
 	}
 
+	// 初稿扩写：在钩子前插入一段，不必整章覆盖。
 	args, _ := json.Marshal(map[string]any{
 		"chapter":    2,
-		"old_string": "必须",
-		"new_string": "应当",
+		"old_string": "开头。",
+		"new_string": "开头。插入的新场景。",
 	})
-	_, err := NewEditChapterTool(s).Execute(context.Background(), args)
-	if err == nil || !errors.Is(err, errs.ErrToolPrecondition) {
-		t.Fatalf("未完成章节应被明确拒绝，got %v", err)
+	if _, err := NewEditChapterTool(s).Execute(context.Background(), args); err != nil {
+		t.Fatalf("未完成章节的初稿应可编辑: %v", err)
 	}
-	if !strings.Contains(err.Error(), `draft_chapter(mode="write"`) {
-		t.Fatalf("错误应指向初稿整章覆盖路径，got %v", err)
+	got, err := s.Drafts.LoadDraft(2)
+	if err != nil {
+		t.Fatalf("LoadDraft: %v", err)
 	}
-	got, loadErr := s.Drafts.LoadDraft(2)
-	if loadErr != nil {
-		t.Fatalf("LoadDraft: %v", loadErr)
-	}
-	if got != original {
-		t.Fatalf("拒绝后不应修改草稿，got %q", got)
+	if got != "开头。插入的新场景。结尾钩子。" {
+		t.Fatalf("draft = %q", got)
 	}
 }
 
-// TestEditChapterSeedsFromFinalChapter drafts 不存在但 chapters 有 → 自动从 chapters 播种。
+func TestEditChapterRejectsIncompleteChapterWithoutDraft(t *testing.T) {
+	dir := t.TempDir()
+	s := store.NewStore(dir)
+	if err := s.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := s.Progress.Init(10); err != nil {
+		t.Fatalf("InitProgress: %v", err)
+	}
+	enterEditWritingPhase(t, s)
+
+	args, _ := json.Marshal(map[string]any{
+		"chapter":    2,
+		"old_string": "a",
+		"new_string": "b",
+	})
+	_, err := NewEditChapterTool(s).Execute(context.Background(), args)
+	if err == nil || !errors.Is(err, errs.ErrToolPrecondition) || !strings.Contains(err.Error(), "draft_chapter") {
+		t.Fatalf("无初稿时应指向 draft_chapter，got %v", err)
+	}
+}
+
 func TestEditChapterSeedsFromFinalChapter(t *testing.T) {
 	dir := t.TempDir()
 	s := store.NewStore(dir)

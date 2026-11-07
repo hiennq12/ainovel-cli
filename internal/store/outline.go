@@ -447,10 +447,26 @@ func reviseLayeredTail(volumes []domain.VolumeOutline, fromChapter int, replacem
 	}
 
 	arc := &volumes[targetVolume].Arcs[targetArc]
+	// 实测架构师两次把刚写完那章的计划当作 replacement 首项（from=18 却以第 17 章开头），
+	// 下一章于是照抄上一章重写一遍。
+	for i, entry := range replacement {
+		for _, kept := range arc.Chapters[:local] {
+			if strings.TrimSpace(entry.Title) != "" && strings.TrimSpace(entry.Title) == strings.TrimSpace(kept.Title) {
+				return fmt.Errorf("replacement 第 %d 项「%s」与第 %d 章同名，该章已写或保留不动。"+
+					"replacement 第一项就是第 %d 章的新计划，不要重复已写章节", i+1, entry.Title, kept.Chapter, fromChapter)
+			}
+		}
+	}
 	updated := append([]domain.OutlineEntry(nil), arc.Chapters[:local]...)
 	updated = append(updated, replacement...)
 	if len(updated) == 0 {
 		return fmt.Errorf("修订后目标弧不能为空")
+	}
+	// 实测架构师把后续两弧的规划整段塞进 replacement，当前弧涨到 26 章、全书 58 章，
+	// 章节上下文随之超预算。revise_outline 只改本弧尾段，后续弧到边界再 expand_arc。
+	if defect := domain.OversizedArc(
+		fmt.Sprintf("第 %d 卷第 %d 弧", volumes[targetVolume].Index, arc.Index), len(updated)); defect != "" {
+		return fmt.Errorf("%s。revise_outline 只修订本弧尾段，replacement 不得包含后续弧的章节", defect)
 	}
 	arc.Chapters = updated
 	arc.EstimatedChapters = 0

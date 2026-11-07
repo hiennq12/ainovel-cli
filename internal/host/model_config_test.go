@@ -289,7 +289,7 @@ func TestConfigureModelsSuggestsSwitchForNewProvider(t *testing.T) {
 		t.Fatalf("configure backup: %v", err)
 	}
 	event := <-h.events
-	if !strings.Contains(event.Summary, "使用 /model 切换") {
+	if !strings.Contains(event.Summary, "dùng /model để chuyển") {
 		t.Fatalf("新增非当前 Provider 后应提示切换，event=%q", event.Summary)
 	}
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/voocel/agentcore"
 	"github.com/voocel/ainovel-cli/internal/store"
+	"github.com/voocel/ainovel-cli/internal/tools"
 )
 
 // subagentMaxConsecutiveBlocks 连续阻拦 N 次后升级为终止，避免弱模型死循环。
@@ -125,7 +126,9 @@ func staticBlockMsg(msg string) func(map[string]struct{}) string {
 // 催促消息按已落盘的 step 进度组装：writer 是唯一有多步工具链的子代理，
 // 静态的"必须调 commit_chapter"在前置步骤缺失或 commit 本身报错时是误导。
 func NewWriterStopGuard(st *store.Store, onBlock BlockHook) agentcore.StopGuard {
-	return newCheckpointDeltaGuard(st, "writer", []string{"commit"}, writerBlockMsg, onBlock)
+	return newCheckpointDeltaGuard(st, "writer", []string{"commit"}, func(seen map[string]struct{}) string {
+		return tools.LocalizeText(st, writerBlockMsg(seen))
+	}, onBlock)
 }
 
 // writerBlockMsg 按本轮已出现的 checkpoint step 判断 writer 卡在哪一步。
@@ -151,7 +154,7 @@ func NewArchitectStopGuard(st *store.Store, onBlock BlockHook) agentcore.StopGua
 			"book", "premise", "outline", "layered_outline", "characters", "world_rules",
 			"foundation_audit", "expand_arc", "append_volume", "update_compass", "complete_book", "revise_outline", "resolve_outline_feedback", "plan",
 		},
-		staticBlockMsg("你必须调用 save_book、save_foundation、revise_outline、resolve_outline_feedback、audit_foundation 或 plan_chapter（为返工队列章写重写指令）将产出落盘后才能结束。只输出 Markdown/JSON 文字等于丢失。"),
+		staticBlockMsg(tools.LocalizeText(st, "你必须调用 save_book、save_foundation、revise_outline、resolve_outline_feedback、audit_foundation 或 plan_chapter（为返工队列章写重写指令）将产出落盘后才能结束。只输出 Markdown/JSON 文字等于丢失。")),
 		onBlock,
 	)
 }
@@ -168,14 +171,14 @@ func NewEditorStopGuard(st *store.Store, task string, onBlock BlockHook) agentco
 	switch {
 	case strings.Contains(task, "save_volume_summary") || strings.Contains(task, "卷摘要"):
 		return newCheckpointDeltaGuard(st, "editor", []string{"volume_summary"},
-			staticBlockMsg("本次任务是生成卷摘要：你必须调用 save_volume_summary 落盘后才能结束，save_review 复核不算完成。"), onBlock)
+			staticBlockMsg(tools.LocalizeText(st, "本次任务是生成卷摘要：你必须调用 save_volume_summary 落盘后才能结束，save_review 复核不算完成。")), onBlock)
 	case strings.Contains(task, "save_arc_summary") || strings.Contains(task, "弧摘要"):
 		return newCheckpointDeltaGuard(st, "editor", []string{"arc_summary"},
-			staticBlockMsg("本次任务是生成弧摘要：你必须调用 save_arc_summary 落盘后才能结束，save_review 复核不算完成。"), onBlock)
+			staticBlockMsg(tools.LocalizeText(st, "本次任务是生成弧摘要：你必须调用 save_arc_summary 落盘后才能结束，save_review 复核不算完成。")), onBlock)
 	default:
 		// 评审或临时任务：任一审阅/摘要落盘即可（保持既有宽松行为）。
 		return newCheckpointDeltaGuard(st, "editor",
 			[]string{"review", "arc_summary", "volume_summary"},
-			staticBlockMsg("你必须调用 save_review / save_arc_summary / save_volume_summary 之一落盘结果后才能结束。"), onBlock)
+			staticBlockMsg(tools.LocalizeText(st, "你必须调用 save_review / save_arc_summary / save_volume_summary 之一落盘结果后才能结束。")), onBlock)
 	}
 }

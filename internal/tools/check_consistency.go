@@ -8,6 +8,7 @@ import (
 	"github.com/voocel/agentcore/schema"
 	"github.com/voocel/ainovel-cli/internal/domain"
 	"github.com/voocel/ainovel-cli/internal/errs"
+	"github.com/voocel/ainovel-cli/internal/rules"
 	"github.com/voocel/ainovel-cli/internal/store"
 )
 
@@ -23,18 +24,18 @@ func NewCheckConsistencyTool(store *store.Store) *CheckConsistencyTool {
 
 func (t *CheckConsistencyTool) Name() string { return "check_consistency" }
 func (t *CheckConsistencyTool) Description() string {
-	return "加载已写草稿和对照数据（世界规则、伏笔、关系、别名、最近摘要），供你检查一致性。必须在 draft_chapter 之后调用"
+	return LocalizeText(t.store, "加载已写草稿和对照数据（世界规则、伏笔、关系、别名、最近摘要），供你检查一致性。必须在 draft_chapter 之后调用")
 }
-func (t *CheckConsistencyTool) Label() string { return "一致性检查" }
+func (t *CheckConsistencyTool) Label() string { return "Kiểm tra nhất quán" }
 
 // 只读工具（仅追加 checkpoint 事件，不改状态），可被并发调度。
 func (t *CheckConsistencyTool) ReadOnly(_ json.RawMessage) bool        { return true }
 func (t *CheckConsistencyTool) ConcurrencySafe(_ json.RawMessage) bool { return true }
 
 func (t *CheckConsistencyTool) Schema() map[string]any {
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("chapter", schema.Int("要检查的章节号")).Required(),
-	)
+	))
 }
 
 func (t *CheckConsistencyTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
@@ -66,6 +67,11 @@ func (t *CheckConsistencyTool) Execute(_ context.Context, args json.RawMessage) 
 	}
 	result["content"] = content
 	result["word_count"] = wordCount
+	// Lint cơ học chạy cả ở đây (không chỉ lúc commit) để writer thấy dấu Markdown sót
+	// và sửa trước khi nộp; commit_chapter vẫn tự chạy lại và lưu kết quả.
+	if vs := rules.Lint(content); len(vs) > 0 {
+		result["rule_violations"] = vs
+	}
 
 	// 对照数据：保留全局性的一致性检查数据，避免重复加载 novel_context 已有的窗口数据
 	if rules, err := t.store.World.LoadWorldRules(); len(rules) > 0 {

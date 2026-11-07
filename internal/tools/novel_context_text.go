@@ -111,7 +111,7 @@ var contextTextZH = contextText{
 	finale: "本卷为全书收官卷：不再新开长线或埋新伏笔，优先回收既有伏笔、收拢关系线，按大纲把故事推向终局。",
 }
 
-// contextTextVI dùng bộ từ đã thống nhất của dự án: tập / cung / chương / đề cương / điểm móc / phục bút.
+// contextTextVI dùng bộ từ đã thống nhất của dự án: tập / cung / chương / đại cương / điểm móc / phục bút.
 var contextTextVI = contextText{
 	readFailed:    "đọc thất bại",
 	episodicUsage: "Khối này là ghi chú các sự kiện đã viết vào chính văn (để đối chiếu nhất quán và nối mạch); kể lại nguyên văn các nội dung này trong chương mới là lỗi lặp",
@@ -125,7 +125,7 @@ var contextTextVI = contextText{
 	volumeSumFmt:     "Tóm tắt tập:%d",
 	arcSumFmt:        "Tóm tắt cung:%d",
 	chapterSumFmt:    "Tóm tắt chương:%d",
-	layeredFmt:       "Đề cương phân tầng:%d tập",
+	layeredFmt:       "Đại cương phân tầng:%d tập",
 	timelineFmt:      "Dòng thời gian:%d",
 	foreshadowFmt:    "Phục bút:%d",
 	relationsFmt:     "Quan hệ:%d",
@@ -157,7 +157,7 @@ var contextTextVI = contextText{
 	issueReason:    "Review gần nhất nhắc lỗi cần tránh lặp lại",
 	issueFmt:       "Nhắc từ review chương %d: %s",
 
-	finale: "Tập này là tập kết thúc toàn truyện: không mở tuyến dài mới hay gieo phục bút mới, ưu tiên thu các phục bút đã có, khép các tuyến quan hệ, theo đề cương đẩy câu chuyện tới kết cục.",
+	finale: "Tập này là tập kết thúc toàn truyện: không mở tuyến dài mới hay gieo phục bút mới, ưu tiên thu các phục bút đã có, khép các tuyến quan hệ, theo đại cương đẩy câu chuyện tới kết cục.",
 
 	memoryPolicy: map[string]string{
 		"每次按章节加载时刷新":        "Làm mới mỗi lần nạp theo chương",
@@ -166,7 +166,7 @@ var contextTextVI = contextText{
 		"最近章节摘要":            "Tóm tắt các chương gần nhất",
 		"卷弧结构、指南针或摘要更新时刷新":  "Làm mới khi cấu trúc tập/cung, la bàn truyện hoặc tóm tắt thay đổi",
 		"角色、伏笔、设定变更时刷新":     "Làm mới khi nhân vật, phục bút hoặc thiết lập thay đổi",
-		"分层大纲、指南针、卷摘要":      "Đề cương phân tầng, la bàn truyện, tóm tắt tập",
+		"分层大纲、指南针、卷摘要":      "Đại cương phân tầng, la bàn truyện, tóm tắt tập",
 		"角色设定、角色快照、伏笔台账":    "Thiết lập nhân vật, snapshot nhân vật, sổ phục bút",
 	},
 }

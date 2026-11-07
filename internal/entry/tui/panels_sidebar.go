@@ -302,38 +302,51 @@ func renderUsageSidebar(snap host.UISnapshot, width int) string {
 		b.WriteString(renderField("Ngân sách", fmt.Sprintf("$%.2f/$%.2f (%.0f%%)", snap.TotalCostUSD, snap.BudgetLimitUSD, pct)))
 	}
 
-	agentStats := usageStatsByCost(snap.CachePerAgent)
+	agentStats := usageStatsByTokens(snap.CachePerAgent)
 	if len(agentStats) > 0 {
 		b.WriteString(renderUsageGroupHeader("Vai trò", width))
+		total := usageTokenSum(agentStats)
 		limit := min(len(agentStats), 4)
 		for i := 0; i < limit; i++ {
 			a := agentStats[i]
-			b.WriteString(renderUsageLine(agentDisplayName(a.Role), eventAgentColor(a.Role), a.Input, a.Output, a.Cost, width))
+			b.WriteString(renderUsageLine(agentDisplayName(a.Role), eventAgentColor(a.Role), a.Input, a.Output, total, a.Cost, width))
 			b.WriteString("\n")
 		}
 	}
-	modelStats := usageStatsByCost(snap.CachePerModel)
+	modelStats := usageStatsByTokens(snap.CachePerModel)
 	if len(modelStats) > 0 {
 		b.WriteString(renderUsageGroupHeader("Model", width))
+		total := usageTokenSum(modelStats)
 		limit := min(len(modelStats), 4)
 		for i := 0; i < limit; i++ {
 			a := modelStats[i]
-			b.WriteString(renderUsageLine(modelDisplayName(a.Model), bodyTextColor, a.Input, a.Output, a.Cost, width))
+			b.WriteString(renderUsageLine(modelDisplayName(a.Model), bodyTextColor, a.Input, a.Output, total, a.Cost, width))
 			b.WriteString("\n")
 		}
 	}
 	return b.String()
 }
 
-func usageStatsByCost(in []host.AgentCacheStat) []host.AgentCacheStat {
+// usageStatsByTokens 按 token 量降序（与占比一致）；包月/未登记价格的模型 cost=0，按 cost 排会把主力角色挤出前 4。
+func usageStatsByTokens(in []host.AgentCacheStat) []host.AgentCacheStat {
 	out := append([]host.AgentCacheStat(nil), in...)
 	sort.SliceStable(out, func(i, j int) bool {
-		if out[i].Cost != out[j].Cost {
-			return out[i].Cost > out[j].Cost
+		ti, tj := out[i].Input+out[i].Output, out[j].Input+out[j].Output
+		if ti != tj {
+			return ti > tj
 		}
-		return out[i].Input+out[i].Output > out[j].Input+out[j].Output
+		return out[i].Cost > out[j].Cost
 	})
 	return out
+}
+
+// usageTokenSum 是一组用量的 token 总量（input+output），作为占比分母。
+func usageTokenSum(in []host.AgentCacheStat) int {
+	sum := 0
+	for _, a := range in {
+		sum += a.Input + a.Output
+	}
+	return sum
 }
 
 func renderUsageGroupHeader(label string, width int) string {
@@ -342,7 +355,8 @@ func renderUsageGroupHeader(label string, width int) string {
 	return lipgloss.NewStyle().Foreground(colorMuted).Render(label+" ") + line + "\n"
 }
 
-func renderUsageLine(name string, color lipgloss.TerminalColor, input, output int, cost float64, width int) string {
+// total > 0 时在 token 数后附该行占组内 token 总量的百分比。
+func renderUsageLine(name string, color lipgloss.TerminalColor, input, output, total int, cost float64, width int) string {
 	nameW := 11
 	if width < 24 {
 		nameW = 8
@@ -351,6 +365,9 @@ func renderUsageLine(name string, color lipgloss.TerminalColor, input, output in
 		Render(truncate(name, nameW))
 	tokens := formatTokensCompact(input + output)
 	right := tokens
+	if total > 0 {
+		right += " " + formatPercent(float64(input+output)/float64(total)*100)
+	}
 	if costStr := formatCostUSD(cost); costStr != "" {
 		right += " · " + costStr
 	}

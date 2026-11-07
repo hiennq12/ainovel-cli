@@ -270,9 +270,9 @@ func (h *Host) ConfigureModels(draft ModelConfigurationDraft) error {
 	// 模型客户端被重建后重新下发推理强度：applyThinkingLocked 按各角色的新模型能力钳制生效值，
 	// 存储的强度意图保持不变。
 	h.applyThinkingLocked("default")
-	summary := fmt.Sprintf("Provider 配置已保存：%s → %s", draft.Provider, h.configPath)
+	summary := fmt.Sprintf("Đã lưu cấu hình provider: %s → %s", draft.Provider, h.configPath)
 	if draft.Provider != h.cfg.Provider {
-		summary += "；使用 /model 切换"
+		summary += "; dùng /model để chuyển"
 	}
 	h.emitEvent(Event{
 		Time: time.Now(), Category: "SYSTEM", Level: "info",

@@ -191,11 +191,11 @@ func (t *UsageTracker) noteCacheBreak(role, task string, u agentcore.Usage) {
 		return
 	}
 	gap := now.Sub(prevAt).Round(time.Second)
-	hint := "疑似服务端逐出/路由漂移（中转站轮询上游是常见原因）"
+	hint := "Nghi do server xoá cache hoặc định tuyến lệch (proxy xoay vòng upstream là nguyên nhân thường gặp)"
 	if gap > time.Hour {
-		hint = "疑似 1h TTL 过期"
+		hint = "Nghi do TTL 1 giờ hết hạn"
 	} else if gap > 5*time.Minute {
-		hint = "疑似 5m TTL 过期"
+		hint = "Nghi do TTL 5 phút hết hạn"
 	}
 	slog.Warn("缓存链断裂：前缀未缩短而命中骤降",
 		"module", "usage", "role", role,

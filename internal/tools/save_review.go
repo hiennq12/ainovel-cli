@@ -27,11 +27,11 @@ func NewSaveReviewTool(store *store.Store) *SaveReviewTool {
 
 func (t *SaveReviewTool) Name() string { return "save_review" }
 func (t *SaveReviewTool) Description() string {
-	return "保存审阅结果并更新流程状态。verdict 为 accept/polish/rewrite 之一。" +
-		"Editor 依据完整上下文作出 verdict，工具只校验事实并原子更新 Progress。" +
-		"返回结构化事实：verdict / affected_chapters / next_flow / next_chapter"
+	return LocalizeText(t.store, "保存审阅结果并更新流程状态。verdict 为 accept/polish/rewrite 之一。"+
+		"Editor 依据完整上下文作出 verdict，工具只校验事实并原子更新 Progress。"+
+		"返回结构化事实：verdict / affected_chapters / next_flow / next_chapter")
 }
-func (t *SaveReviewTool) Label() string { return "保存审阅" }
+func (t *SaveReviewTool) Label() string { return "Lưu review" }
 
 // 写工具（同时更新 reviews/ 与 Progress 的 PendingRewrites/Flow），禁止并发。
 func (t *SaveReviewTool) ReadOnly(_ json.RawMessage) bool        { return false }
@@ -53,7 +53,7 @@ func (t *SaveReviewTool) Schema() map[string]any {
 		schema.Property("score", schema.Int("评分（0-100）")).Required(),
 		schema.Property("comment", schema.String("该维度的简要结论和证据；每个维度必填")).Required(),
 	)
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("chapter", schema.Int("审阅的章节号（全局审阅填最新章节号）")).Required(),
 		schema.Property("scope", schema.Enum("审阅范围", "chapter", "global", "arc")).Required(),
 		schema.Property("dimensions", schema.Array("分维度评分；基础 rubric 由 Editor 提示提供，可按任务补充更具体维度", dimensionSchema)).Required(),
@@ -63,7 +63,7 @@ func (t *SaveReviewTool) Schema() map[string]any {
 		schema.Property("contract_notes", llmcontract.Nullable(schema.String("对 contract 履行情况的简要说明；无则为 null"))).Required(),
 		schema.Property("verdict", schema.Enum("审阅结论", "accept", "polish", "rewrite")).Required(),
 		schema.Property("summary", schema.String("审阅总结")).Required(),
-	)
+	))
 }
 
 func (t *SaveReviewTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {

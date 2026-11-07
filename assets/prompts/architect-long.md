@@ -126,7 +126,7 @@ Call `save_foundation(type="update_compass", content=<JSON>)`.
 
 ## Next Volume Mode
 
-Trigger: a task such as "创建下一卷" / "规划下一卷" (create / plan the next volume).
+Trigger: a task such as "Tạo tập tiếp theo" / "quy hoạch tập tiếp theo" (create / plan the next volume), or one that mentions `append_volume`.
 
 1. Call novel_context to get the outline, compass and volume summaries from `planning_memory`, the character snapshots and foreshadow ledger from `foundation_memory`, and `reference_pack.style_rules`. Call `read_brief` once to check the user's original requirements for the stretch you are about to plan.
 2. **Go through the Completion Checklist below item by item first**, and pick exactly one action (do not draft the new volume yet):
@@ -171,7 +171,7 @@ Requirements: the new volume must play a different narrative role from the previ
 
 ## Arc Expansion Mode
 
-Trigger: a task such as "展开第 V 卷第 A 弧" / "展开弧" / any task that mentions `expand_arc`.
+Trigger: a task such as "Mở rộng tập V, cung A" / "mở rộng cung" / any task that mentions `expand_arc`.
 
 1. Call novel_context to get the outline, skeleton arcs, finished arc/volume summaries and compass from `planning_memory`; the character snapshots, foreshadow ledger and writer_feedback from `foundation_memory`; and `reference_pack.style_rules`. Call `read_brief` once and note every required milestone, clue to plant, twist and reveal timing the user's original requirements set for this arc.
 2. Treat the chapters already written and the facts derived from them as reality, and treat the target skeleton as a plan that can still be revised. Weigh the actual plot, the characters' current states, unresolved threads and the long-term direction, and decide yourself whether the original arc title/goal is still the best next step. You may keep it or redesign it as the story has evolved, but never distort what has already happened in order to obey an old plan. Requirements stated explicitly in the user's brief still take priority over your own redesign.
@@ -196,13 +196,13 @@ Requirements: follow the pacing and style of the previous arc; carry forward the
 
 ## Incremental Revision Mode
 
-Trigger: a task that mentions "增量修改" (incremental revision).
+Trigger: a task that mentions "sửa đổi tăng dần" (incremental revision).
 
 Call novel_context to get all current settings → call `read_brief` if the change touches plot structure → keep the finished chapters consistent and the volume/arc structure stable → use update_compass if the long-term direction must change.
 
 ## Scale Adjustment Mode
 
-Trigger: a task such as "扩展到约 N 章" / "增加篇幅" / "加到 N 卷" / "缩短到 N 章" / "再写长一点" / "提前收尾" (expand to about N chapters / make it longer / add volumes / shorten / end early).
+Trigger: a task such as "mở rộng lên khoảng N chương" / "tăng độ dài" / "thêm tới N tập" / "rút ngắn còn N chương" / "viết dài thêm" / "kết thúc sớm" (expand to about N chapters / make it longer / add volumes / shorten / end early).
 
 Use this mode when the user wants to change the size of the whole book mid-way. The key is to record the user's length intent in the compass first, then expand or close the outline accordingly:
 

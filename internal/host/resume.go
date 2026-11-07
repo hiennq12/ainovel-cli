@@ -147,7 +147,7 @@ func resumeLabel(store *storepkg.Store) (string, error) {
 func describeResume(store *storepkg.Store, progress *domain.Progress) (string, error) {
 	switch progress.Phase {
 	case domain.PhasePremise, domain.PhaseOutline:
-		return fmt.Sprintf("恢复：规划阶段（%s）", progress.Phase), nil
+		return fmt.Sprintf("Khôi phục: giai đoạn quy hoạch (%s)", progress.Phase), nil
 	case domain.PhaseWriting:
 		// 优先级与 Router 的决策优先级对齐，让 label 与即将派发的指令一致。
 		pending, err := store.Signals.LoadPendingCommit()
@@ -155,20 +155,20 @@ func describeResume(store *storepkg.Store, progress *domain.Progress) (string, e
 			return "", fmt.Errorf("读取待恢复提交: %w", err)
 		}
 		if pending != nil {
-			return fmt.Sprintf("恢复：第 %d 章提交中断", pending.Chapter), nil
+			return fmt.Sprintf("Khôi phục: nộp chương %d bị gián đoạn", pending.Chapter), nil
 		}
 		if len(progress.PendingRewrites) > 0 {
-			verb := "重写"
+			verb := "viết lại"
 			if progress.Flow == domain.FlowPolishing {
-				verb = "打磨"
+				verb = "trau chuốt"
 			}
-			return fmt.Sprintf("%s恢复：%d 章待处理", verb, len(progress.PendingRewrites)), nil
+			return fmt.Sprintf("Khôi phục %s: %d chương chờ xử lý", verb, len(progress.PendingRewrites)), nil
 		}
 		if progress.Flow == domain.FlowReviewing {
-			return "恢复：审阅中断", nil
+			return "Khôi phục: review bị gián đoạn", nil
 		}
 		if progress.InProgressChapter > 0 {
-			return fmt.Sprintf("恢复：第 %d 章进行中", progress.InProgressChapter), nil
+			return fmt.Sprintf("Khôi phục: chương %d đang viết dở", progress.InProgressChapter), nil
 		}
 		label, err := describeArcEndLabel(store, progress)
 		if err != nil {
@@ -177,9 +177,9 @@ func describeResume(store *storepkg.Store, progress *domain.Progress) (string, e
 		if label != "" {
 			return label, nil
 		}
-		return fmt.Sprintf("恢复：从第 %d 章继续", progress.NextChapter()), nil
+		return fmt.Sprintf("Khôi phục: tiếp tục từ chương %d", progress.NextChapter()), nil
 	}
-	return "恢复", nil
+	return "Khôi phục", nil
 }
 
 // describeArcEndLabel 为弧末/卷末的多种中间状态生成贴合 UI 的标签。
@@ -214,15 +214,15 @@ func describeArcEndLabel(store *storepkg.Store, progress *domain.Progress) (stri
 	}
 	switch {
 	case !hasArcReview:
-		return fmt.Sprintf("恢复：弧末评审待处理（V%d A%d）", vol, arc), nil
+		return fmt.Sprintf("Khôi phục: review cuối cung chờ xử lý (V%d A%d)", vol, arc), nil
 	case !hasArcSummary:
-		return fmt.Sprintf("恢复：弧摘要待生成（V%d A%d）", vol, arc), nil
+		return fmt.Sprintf("Khôi phục: tóm tắt cung chờ tạo (V%d A%d)", vol, arc), nil
 	case boundary.IsVolumeEnd && !hasVolumeSummary:
-		return fmt.Sprintf("恢复：卷摘要待生成（V%d）", vol), nil
+		return fmt.Sprintf("Khôi phục: tóm tắt tập chờ tạo (V%d)", vol), nil
 	case boundary.NeedsExpansion && boundary.NextArc > 0:
-		return fmt.Sprintf("恢复：待展开下一弧（V%d A%d）", boundary.NextVolume, boundary.NextArc), nil
+		return fmt.Sprintf("Khôi phục: chờ mở rộng cung tiếp theo (V%d A%d)", boundary.NextVolume, boundary.NextArc), nil
 	case boundary.NeedsNewVolume:
-		return fmt.Sprintf("恢复：待决策下一卷（V%d 末）", vol), nil
+		return fmt.Sprintf("Khôi phục: chờ quyết định tập tiếp theo (cuối V%d)", vol), nil
 	}
 	return "", nil
 }

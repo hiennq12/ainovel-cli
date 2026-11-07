@@ -89,9 +89,16 @@ func TestRenderStatusBarAutoThinkingAndEmpty(t *testing.T) {
 }
 
 func TestRenderUsageLineSeparatesFullWidthNameAndTokens(t *testing.T) {
-	out := renderUsageLine("gpt-5.6-sol", bodyTextColor, 5300, 0, 0.23, 32)
+	out := renderUsageLine("gpt-5.6-sol", bodyTextColor, 5300, 0, 0, 0.23, 32)
 	if !strings.Contains(out, "gpt-5.6-sol 5.3k") {
 		t.Fatalf("model name and tokens should have a visible gap: %q", out)
+	}
+}
+
+func TestRenderUsageLineShowsTokenShare(t *testing.T) {
+	out := ansi.Strip(renderUsageLine("writer", bodyTextColor, 6000, 2500, 10000, 0, 32))
+	if !strings.Contains(out, "8.5k 85%") {
+		t.Fatalf("thiếu tỉ lệ token: %q", out)
 	}
 }
 

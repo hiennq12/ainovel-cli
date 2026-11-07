@@ -23,16 +23,16 @@ func NewPlanChapterTool(store *store.Store) *PlanChapterTool {
 
 func (t *PlanChapterTool) Name() string { return "plan_chapter" }
 func (t *PlanChapterTool) Description() string {
-	return "保存章节写作构思。Agent 自主决定规划粒度，不强制场景拆分"
+	return LocalizeText(t.store, "保存章节写作构思。Agent 自主决定规划粒度，不强制场景拆分")
 }
-func (t *PlanChapterTool) Label() string { return "规划章节" }
+func (t *PlanChapterTool) Label() string { return "Lập kế hoạch chương" }
 
 // 写工具，禁止并发。
 func (t *PlanChapterTool) ReadOnly(_ json.RawMessage) bool        { return false }
 func (t *PlanChapterTool) ConcurrencySafe(_ json.RawMessage) bool { return false }
 
 func (t *PlanChapterTool) Schema() map[string]any {
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("chapter", schema.Int("章节号")).Required(),
 		schema.Property("title", schema.String("暂定章节标题；写作后可按正文调整")).Required(),
 		schema.Property("goal", schema.String("本章目标")).Required(),
@@ -47,7 +47,7 @@ func (t *PlanChapterTool) Schema() map[string]any {
 		schema.Property("emotion_target", schema.String("可选：本章希望读者主要感受到的情绪")),
 		schema.Property("payoff_points", schema.Array("可选：关键章希望回应的情节点或兑现点", schema.String(""))),
 		schema.Property("hook_goal", schema.String("可选：章末希望驱动的追读欲望或悬念目标")),
-	)
+	))
 }
 
 func (t *PlanChapterTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {

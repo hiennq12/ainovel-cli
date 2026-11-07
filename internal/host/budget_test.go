@@ -138,7 +138,7 @@ func TestBudgetSentinelZeroCostBlindWarning(t *testing.T) {
 	for range blindZeroStreak + 3 {
 		s.OnCost(0)
 	}
-	if len(r.reports) != 1 || !strings.Contains(r.reports[0], "预算盲区") {
+	if len(r.reports) != 1 || !strings.Contains(r.reports[0], "Điểm mù ngân sách") {
 		t.Fatalf("expected exactly one blind warning, got %v", r.reports)
 	}
 	if len(r.aborts) != 0 {
@@ -169,7 +169,7 @@ func TestBudgetSentinelBlindWarningAfterModelSwitch(t *testing.T) {
 	for range blindZeroStreak {
 		s.OnCost(5.0) // 切到无价模型：总额钉死
 	}
-	if len(r.reports) != 1 || !strings.Contains(r.reports[0], "盲区") {
+	if len(r.reports) != 1 || !strings.Contains(r.reports[0], "Điểm mù") {
 		t.Fatalf("expected blind warning after switch to unpriced model, got %v", r.reports)
 	}
 }

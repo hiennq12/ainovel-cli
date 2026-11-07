@@ -35,3 +35,26 @@ func TestCheckConsistencyReturnsPartialFactsWithWarnings(t *testing.T) {
 		t.Fatalf("应返回正文、partial 和数据告警: %+v", got)
 	}
 }
+
+func TestCheckConsistencyReportsMarkdownResidue(t *testing.T) {
+	st := store.NewStore(t.TempDir())
+	if err := st.Init(); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Drafts.SaveDraft(1, "# Chương 1\nKế hoạch *dự kiến* xong."); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := NewCheckConsistencyTool(st).Execute(context.Background(), json.RawMessage(`{"chapter":1}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got struct {
+		Violations []struct{ Rule, Target string } `json:"rule_violations"`
+	}
+	if err := json.Unmarshal(raw, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Violations) != 1 || got.Violations[0].Rule != "markdown_residue" || got.Violations[0].Target != "*" {
+		t.Fatalf("writer phải thấy dấu in nghiêng trước khi commit: %+v", got.Violations)
+	}
+}

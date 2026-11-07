@@ -18,7 +18,9 @@ import (
 //
 // 落盘契约：只改 drafts/{ch:02d}.draft.md，禁止直接改 chapters/（终稿由 commit_chapter 独占）。
 // Seed 语义：drafts 不存在但 chapters 有 → 自动把 chapters 复制到 drafts 作为起点。
-// 归属检查：仅允许编辑已完成且位于 PendingRewrites 队列中的章节。
+// 归属检查：允许编辑未完成章节已有的初稿，或已完成且位于 PendingRewrites 队列中的章节。
+// （Bản Việt: mở cho bản nháp đầu, vì nếu không writer phải ghi đè cả chương chỉ để chèn
+// thêm cảnh hay sửa vài chữ; xem novels trinh-tham-01 chương 5: 13 lần ghi đè.）
 //
 // 本工具是 agentcore.EditTool 的薄封装，找-换逻辑（多级容错匹配、diff 输出、行尾/BOM 保留）
 // 全部复用上游实现。
@@ -35,7 +37,7 @@ func NewEditChapterTool(s *store.Store) *EditChapterTool {
 }
 
 func (t *EditChapterTool) Name() string  { return "edit_chapter" }
-func (t *EditChapterTool) Label() string { return "编辑章节" }
+func (t *EditChapterTool) Label() string { return "Sửa chương" }
 
 // ReadOnly 明确声明写工具（配合 ConcurrencySafeTool 防止被并发调度）。
 func (t *EditChapterTool) ReadOnly(_ json.RawMessage) bool { return false }
@@ -48,23 +50,23 @@ func (t *EditChapterTool) ConcurrencySafe(_ json.RawMessage) bool { return false
 func (t *EditChapterTool) ActivityDescription(_ json.RawMessage) string { return "编辑章节草稿" }
 
 func (t *EditChapterTool) Description() string {
-	return "仅对已完成且进入 PendingRewrites 队列的章节草稿做定点字符串替换（打磨场景首选，比 draft_chapter 整章重写省 token）。" +
-		"新章初稿禁止使用本工具；初稿有硬伤请调用 draft_chapter(mode=\"write\") 整章覆盖。" +
-		"找到 old_string 并替换为 new_string，要求精确匹配且唯一（多处匹配需 replace_all=true）。" +
-		"old_string 必须从最近一次 read_chapter(source=\"draft\") 的返回中逐字复制，禁止凭记忆重构原文；" +
-		"注意返回值是 JSON 字符串，\\n 须还原为真实换行。draft_chapter 改写过草稿后必须先重新 read_chapter 再编辑。" +
-		"匹配失败的报错会附上草稿中最接近的候选片段，请从候选逐字复制后重试。" +
-		"写入 drafts/{ch}.draft.md；drafts 不存在时自动从 chapters 播种。" +
-		"章节已完成且不在 PendingRewrites 队列中时拒绝执行。每次调用只改一处，多处修改请多次调用。"
+	return LocalizeText(t.store, "对章节草稿做定点字符串替换：新章已有初稿时可用于插入、扩写或修正局部，已完成章节仅限进入 PendingRewrites 队列的（比 draft_chapter 整章重写省 token）。"+
+		"扩写或改局部时优先用本工具，不要为了几处改动整章覆盖。"+
+		"找到 old_string 并替换为 new_string，要求精确匹配且唯一（多处匹配需 replace_all=true）。"+
+		"old_string 必须从最近一次 read_chapter(source=\"draft\") 的返回中逐字复制，禁止凭记忆重构原文；"+
+		"注意返回值是 JSON 字符串，\\n 须还原为真实换行。draft_chapter 改写过草稿后必须先重新 read_chapter 再编辑。"+
+		"匹配失败的报错会附上草稿中最接近的候选片段，请从候选逐字复制后重试。"+
+		"写入 drafts/{ch}.draft.md；drafts 不存在时自动从 chapters 播种。"+
+		"新章无初稿时请先调 draft_chapter；章节已完成且不在 PendingRewrites 队列中时拒绝执行。每次调用只改一处，多处修改请多次调用。")
 }
 
 func (t *EditChapterTool) Schema() map[string]any {
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("chapter", schema.Int("章节号")).Required(),
 		schema.Property("old_string", schema.String("要替换的原文精确片段，多行需包含换行；不加 replace_all 时必须在草稿中唯一出现")).Required(),
 		schema.Property("new_string", schema.String("替换后的新文本")).Required(),
 		schema.Property("replace_all", schema.Bool("替换所有匹配（默认 false）")),
-	)
+	))
 }
 
 func (t *EditChapterTool) Execute(ctx context.Context, args json.RawMessage) (json.RawMessage, error) {
@@ -90,21 +92,20 @@ func (t *EditChapterTool) Execute(ctx context.Context, args json.RawMessage) (js
 		return nil, err
 	}
 
-	// 归属检查：机械落实 writer 协议。新章初稿只能整章覆盖，不能依赖
-	// 模型自行遵守提示词后仍把脆弱的精确编辑暴露为可执行路径。
+	// 归属检查：已完成章节只能在 PendingRewrites 队列中编辑。未完成章节必须已有
+	// 初稿（ensureDraft 不会从不存在的终稿播种），初稿由 draft_chapter 创建。
 	completed, err := t.store.Progress.IsChapterCompleted(a.Chapter)
 	if err != nil {
 		return nil, fmt.Errorf("load progress: %w: %w", errs.ErrStoreRead, err)
 	}
-	if !completed {
-		return nil, fmt.Errorf("第 %d 章尚未完成，初稿禁止使用 edit_chapter；有硬伤请调用 draft_chapter(mode=\"write\", chapter=%d) 整章覆盖: %w", a.Chapter, a.Chapter, errs.ErrToolPrecondition)
-	}
-	progress, err := t.store.Progress.Load()
-	if err != nil {
-		return nil, fmt.Errorf("load progress: %w: %w", errs.ErrStoreRead, err)
-	}
-	if progress == nil || !slices.Contains(progress.PendingRewrites, a.Chapter) {
-		return nil, fmt.Errorf("第 %d 章已完成且不在 PendingRewrites 队列中，不能编辑；需修改请先由 editor 评审触发重写/打磨: %w", a.Chapter, errs.ErrToolPrecondition)
+	if completed {
+		progress, err := t.store.Progress.Load()
+		if err != nil {
+			return nil, fmt.Errorf("load progress: %w: %w", errs.ErrStoreRead, err)
+		}
+		if progress == nil || !slices.Contains(progress.PendingRewrites, a.Chapter) {
+			return nil, fmt.Errorf("第 %d 章已完成且不在 PendingRewrites 队列中，不能编辑；需修改请先由 editor 评审触发重写/打磨: %w", a.Chapter, errs.ErrToolPrecondition)
+		}
 	}
 	if err := EnsureChapterExpanded(t.store, a.Chapter); err != nil {
 		return nil, err

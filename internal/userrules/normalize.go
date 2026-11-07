@@ -23,7 +23,7 @@ import (
 // normalizeMaxTokens 单次归一化的输出上限（思考 token 与 JSON 输出共享这一预算）。
 // 归一化 JSON 本身很小（通常 <1k），这里留大头是给"无法关闭思考的推理模型"的思考预算——
 // 留窄了思考会挤占 JSON 导致截断、解析失败。max_tokens 是上限不是计费量，调大不增成本。
-const normalizeMaxTokens = 8192
+const normalizeMaxTokens = 16384
 
 // normalizeContract 紧邻边界 DTO：全字段 required、fatigue_words 用对象数组
 // （strict 模式禁止动态 key 的 map），两种模式共用同一 DTO 约定。
@@ -185,4 +185,6 @@ const normalizerSystemPrompt = `你是 AI 小说写作系统的「规则归一�
 - 原则:宁可漏进 structured,也不要错误提升(那会每章误报)。
 
 preferences 用一段可读的自然语言保留风格、人物与审美偏好。
-uncertain 说明你故意没有提升到 structured 的项目及原因。`
+uncertain 说明你故意没有提升到 structured 的项目及原因。
+
+【语言】preferences 和 uncertain 必须使用用户原文的语言书写（原文是越南语就全部用越南语），不得翻译成中文。它们会原样注入写作与评审上下文。`

@@ -24,9 +24,9 @@ func NewDraftChapterTool(store *store.Store) *DraftChapterTool {
 
 func (t *DraftChapterTool) Name() string { return "draft_chapter" }
 func (t *DraftChapterTool) Description() string {
-	return "写入章节正文。mode=write 覆盖写入整章，mode=append 追加到现有草稿（续写/修改）"
+	return LocalizeText(t.store, "写入章节正文。mode=write 覆盖写入整章，mode=append 追加到现有草稿（续写/修改）")
 }
-func (t *DraftChapterTool) Label() string { return "写入章节" }
+func (t *DraftChapterTool) Label() string { return "Ghi bản nháp chương" }
 
 // 写工具，禁止并发（读-改-写竞态）。
 func (t *DraftChapterTool) ReadOnly(_ json.RawMessage) bool        { return false }
@@ -36,11 +36,11 @@ func (t *DraftChapterTool) Schema() map[string]any {
 	// mode 标 required 是为了兼容 OpenAI strict tool calling——strict 模式
 	// 要求所有 properties 都在 required 列表中。原来的"省略 mode 走 write
 	// 默认"行为现在需要模型显式传 mode="write"，Execute 的 default 分支不变。
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("chapter", schema.Int("章节号")).Required(),
 		schema.Property("content", schema.String("章节正文")).Required(),
 		schema.Property("mode", schema.Enum("写入模式", "write", "append")).Required(),
-	)
+	))
 }
 
 // StrictSchema 要求 Provider 保证工具参数符合 schema。

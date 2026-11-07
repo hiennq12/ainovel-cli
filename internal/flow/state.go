@@ -12,7 +12,7 @@ import (
 // 任何读取失败都返回错误；损坏的工件与“尚未生成”是两种不同事实，Router 不得
 // 在不完整快照上继续派单。
 func LoadState(store *storepkg.Store) (State, error) {
-	var s State
+	s := State{Language: store.Language()}
 	missing, err := store.FoundationMissing()
 	if err != nil {
 		return s, fmt.Errorf("load foundation state: %w", err)

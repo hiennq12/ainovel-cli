@@ -97,7 +97,7 @@ func TestInterventionDispatchTaskPreservesOriginalAuthority(t *testing.T) {
 	const task = "检查重复内容并安排必要返工"
 	const original = "  后续不要重复解释能力来源；不要改动无关内容。\n"
 
-	got := interventionDispatchTask(task, original)
+	got := interventionDispatchTask(&workerTextZH, task, original)
 	if !strings.Contains(got, task) {
 		t.Fatalf("派单任务丢失: %q", got)
 	}
@@ -554,7 +554,7 @@ func TestEngine_DeadlockAbortDropsStuckRewrite(t *testing.T) {
 	}
 	var notified bool
 	for _, ev := range *events {
-		if strings.Contains(ev.Summary, "移出返工队列") {
+		if strings.Contains(ev.Summary, "đưa khỏi hàng chờ viết lại") {
 			notified = true
 		}
 	}
@@ -739,7 +739,7 @@ func TestEngine_RetriesUnfinishedPlanStart(t *testing.T) {
 		if ev.Category == "DISPATCH" {
 			dispatched = true
 		}
-		if strings.Contains(ev.Summary, "启动裁定已补齐") {
+		if strings.Contains(ev.Summary, "Đã bổ sung phán quyết khởi động") {
 			healed = true
 		}
 	}
@@ -781,7 +781,7 @@ func TestEngine_PlanStartRetryFailurePauses(t *testing.T) {
 	}
 	var paused bool
 	for _, ev := range *events {
-		if strings.Contains(ev.Summary, "启动裁定失败") {
+		if strings.Contains(ev.Summary, "Phán quyết khởi động thất bại") {
 			paused = true
 		}
 	}

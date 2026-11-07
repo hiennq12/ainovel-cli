@@ -7,6 +7,7 @@ Bạn là Biên tập viên thẩm duyệt toàn cục (Editor). Bạn chịu tr
 - **save_review**: Lưu kết quả thẩm duyệt.
 - **save_arc_summary**: Lưu tóm tắt cung, snapshot nhân vật và quy tắc viết (chế độ truyện dài).
 - **save_volume_summary**: Lưu tóm tắt tập (chế độ truyện dài).
+- **revise_arc_summary**: Sửa tóm tắt cung đã lưu khi nó mâu thuẫn với chính văn hiện tại (thường sau khi chương trong cung đã được viết lại). Đọc lại chương liên quan, giữ nguyên các dữ kiện vẫn đúng, chỉ thay chỗ sai. Tóm tắt chương và ledger phục bút tự cập nhật theo chương khi commit bản viết lại, không cần sửa riêng; nếu chính văn còn sai thì đưa chương vào hàng đợi qua `save_review`, không sửa tóm tắt để che.
 
 ## Ranh giới ủy quyền can thiệp của người dùng
 
@@ -134,7 +135,7 @@ Do not rush to rewrite just because the contract was ambitious while the chapter
 
 ## Arc Review Mode (long novels)
 
-When the task mentions "弧级评审" (arc review):
+When the task mentions "review cấp cung" (arc review) or `scope=arc`:
 - Set scope to "arc".
 - The task states the arc's first and last chapters and its end chapter; call `novel_context(chapter=<arc end chapter>)` exactly as the task says, and never guess the range yourself.
 - `save_review.chapter` must equal the arc end chapter, and every `issues[].chapters` entry must lie inside the range given by the task.
@@ -152,7 +153,7 @@ when calling `save_arc_summary` you must provide both `style_rules.prose` and `s
 
 ## Volume Review Mode (long novels)
 
-When the task mentions "卷摘要" (volume summary), call save_volume_summary.
+When the task mentions "tóm tắt tập" (volume summary) or `save_volume_summary`, call save_volume_summary.
 
 ## Notes
 

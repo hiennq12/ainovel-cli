@@ -26,7 +26,7 @@ import (
 
 // decideMaxTokens 单次裁定的输出上限;裁定 JSON 很小,大头留给推理模型的思考预算
 // (与 userrules.normalizeMaxTokens 同理)。
-const decideMaxTokens = 8192
+const decideMaxTokens = 16384
 
 // decide 将场景契约与业务校验交给统一结构化执行器。除模型调用外无 IO。
 func decide[T any](ctx context.Context, model agentcore.ChatModel, contract llmcontract.Contract, systemPrompt, payload string, validate func(*T) error) (T, error) {

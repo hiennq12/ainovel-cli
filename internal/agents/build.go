@@ -146,6 +146,7 @@ func BuildWorkers(
 		readChapter,
 		tools.NewSaveReviewTool(store),
 		tools.NewSaveArcSummaryTool(store),
+		tools.NewReviseArcSummaryTool(store),
 		tools.NewSaveVolumeSummaryTool(store),
 	}
 
@@ -191,6 +192,9 @@ func BuildWorkers(
 	// 多轮会话下读缓存收益恒为正，故不设开关。
 	cacheBase := promptCacheBase(store.Dir())
 
+	// Kết quả và lỗi tool dịch theo ngôn ngữ tác phẩm trước khi tới model (tools/localize.go).
+	localizeOutput := []agentcore.ToolMiddleware{tools.LocalizeToolOutput(store)}
+
 	architectStopGuardFactory := func(_, _ string) agentcore.StopGuard {
 		return guard.NewArchitectStopGuard(store, onGuardBlock)
 	}
@@ -201,6 +205,7 @@ func BuildWorkers(
 		Model:            architectModel,
 		SystemPrompt:     bundle.Prompts.ArchitectShort,
 		Tools:            architectTools,
+		Middlewares:      localizeOutput,
 		MaxTurns:         15,
 		MaxRetries:       subagentMaxRetries,
 		ThinkingLevel:    architectThinking,
@@ -218,6 +223,7 @@ func BuildWorkers(
 		Model:               architectModel,
 		SystemPrompt:        bundle.Prompts.ArchitectLong,
 		Tools:               architectTools,
+		Middlewares:         localizeOutput,
 		MaxTurns:            20,
 		MaxRetries:          subagentMaxRetries,
 		ThinkingLevel:       architectThinking,
@@ -241,6 +247,7 @@ func BuildWorkers(
 		Model:            writerModel,
 		SystemPrompt:     writerPrompt,
 		Tools:            writerTools,
+		Middlewares:      localizeOutput,
 		MaxTurns:         30,
 		MaxRetries:       subagentMaxRetries,
 		ThinkingLevel:    resolvedRoleThinking(writerModel, cfg, "writer"),
@@ -287,6 +294,7 @@ func BuildWorkers(
 		Model:            editorModel,
 		SystemPrompt:     bundle.Prompts.Editor,
 		Tools:            editorTools,
+		Middlewares:      localizeOutput,
 		MaxTurns:         20,
 		MaxRetries:       subagentMaxRetries,
 		ThinkingLevel:    resolvedRoleThinking(editorModel, cfg, "editor"),

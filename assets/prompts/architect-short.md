@@ -105,7 +105,7 @@ Pass `content` for outline / characters / world_rules directly as a JSON array, 
 
 ## Incremental Revision Mode
 
-When the task mentions "增量修改" (incremental revision):
+When the task mentions "sửa đổi tăng dần" (incremental revision):
 
 1. Call novel_context to get the premise, characters and world_rules from `foundation_memory`, and `planning_memory.outline`. If the change touches plot structure, call `read_brief` once to check the user's original requirements.
 2. Keep the finished chapters consistent.

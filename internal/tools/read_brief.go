@@ -26,15 +26,15 @@ func NewReadBriefTool(store *store.Store) *ReadBriefTool {
 
 func (t *ReadBriefTool) Name() string { return "read_brief" }
 func (t *ReadBriefTool) Description() string {
-	return "读取用户开书时提交的创作需求原文（设定集/Story Bible）。扩展弧、续卷或修订大纲前用于对照必达节点、伏笔与反转揭示时机"
+	return LocalizeText(t.store, "读取用户开书时提交的创作需求原文（设定集/Story Bible）。扩展弧、续卷或修订大纲前用于对照必达节点、伏笔与反转揭示时机")
 }
-func (t *ReadBriefTool) Label() string { return "读取创作需求" }
+func (t *ReadBriefTool) Label() string { return "Đọc yêu cầu sáng tác" }
 
 func (t *ReadBriefTool) ReadOnly(_ json.RawMessage) bool        { return true }
 func (t *ReadBriefTool) ConcurrencySafe(_ json.RawMessage) bool { return true }
 
 func (t *ReadBriefTool) Schema() map[string]any {
-	return schema.Object()
+	return localizeSchema(t.store, schema.Object())
 }
 
 func (t *ReadBriefTool) Execute(_ context.Context, _ json.RawMessage) (json.RawMessage, error) {

@@ -27,9 +27,9 @@ func NewSaveArcSummaryTool(store *store.Store) *SaveArcSummaryTool {
 
 func (t *SaveArcSummaryTool) Name() string { return "save_arc_summary" }
 func (t *SaveArcSummaryTool) Description() string {
-	return "保存弧级摘要、角色状态快照和写作规则（长篇模式，弧结束时调用）"
+	return LocalizeText(t.store, "保存弧级摘要、角色状态快照和写作规则（长篇模式，弧结束时调用）")
 }
-func (t *SaveArcSummaryTool) Label() string { return "保存弧摘要" }
+func (t *SaveArcSummaryTool) Label() string { return "Lưu tóm tắt cung" }
 
 // 写工具，禁止并发。
 func (t *SaveArcSummaryTool) ReadOnly(_ json.RawMessage) bool        { return false }
@@ -52,7 +52,7 @@ func (t *SaveArcSummaryTool) Schema() map[string]any {
 		schema.Property("dialogue", schema.Array("核心角色的对话特征规则", voiceSchema)).Required(),
 		schema.Property("taboos", schema.Array("本小说需避免的写法", schema.String(""))),
 	)
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("volume", schema.Int("卷号")).Required(),
 		schema.Property("arc", schema.Int("弧号")).Required(),
 		schema.Property("title", schema.String("弧标题")).Required(),
@@ -60,7 +60,7 @@ func (t *SaveArcSummaryTool) Schema() map[string]any {
 		schema.Property("key_events", schema.Array("弧内关键事件", schema.String(""))).Required(),
 		schema.Property("character_snapshots", schema.Array("角色状态快照", snapshotSchema)).Required(),
 		schema.Property("style_rules", styleRulesSchema).Required(),
-	)
+	))
 }
 
 func (t *SaveArcSummaryTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {

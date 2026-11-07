@@ -2,6 +2,7 @@ package host
 
 import (
 	"context"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -185,7 +186,7 @@ func TestStageCoCreate_OccupancyBlocksConcurrentEntries(t *testing.T) {
 }
 
 func TestBuildStoryStateSummary_NilStore(t *testing.T) {
-	if got := buildStoryStateSummary(nil); got != "" {
+	if got := buildStoryStateSummary(nil, &storyStateTextZH); got != "" {
 		t.Errorf("nil store 应返回空串，得 %q", got)
 	}
 }
@@ -216,11 +217,32 @@ func TestBuildStoryStateSummary_Populated(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := buildStoryStateSummary(st)
+	got := buildStoryStateSummary(st, &storyStateTextZH)
 	for _, want := range []string{"影之诗", "已完成 3 章", "下一章为第 4 章", "主角登临绝巅", "师门血仇未报", "预计 4-6 卷"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("摘要应含 %q，实际:\n%s", want, got)
 		}
+	}
+
+	// Tác phẩm tiếng Việt: prompt giai đoạn và phần tóm tắt trạng thái không còn chữ Hán do hệ thống thêm.
+	st.SetLanguage("vi")
+	if err := st.Book.Save(domain.BookMetadata{Title: "Bóng đêm", Synopsis: "Cậu bé đi tìm cái bóng."}); err != nil {
+		t.Fatal(err)
+	}
+	if err := st.Outline.SaveCompass(domain.StoryCompass{EndingDirection: "Lên đỉnh"}); err != nil {
+		t.Fatal(err)
+	}
+	prompt := stageSystemPrompt(st)
+	for _, want := range []string{"Trạng thái truyện hiện tại", "đã hoàn thành 3 chương", "chương tiếp theo là chương 4", "<draft>", "<suggestions>"} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("prompt tiếng Việt thiếu %q:\n%s", want, prompt)
+		}
+	}
+	if m := regexp.MustCompile(`\p{Han}`).FindString(prompt); m != "" {
+		t.Errorf("prompt tiếng Việt còn chữ Hán %q:\n%s", m, prompt)
+	}
+	if cold, _, _ := coCreatePrompts("vi"); regexp.MustCompile(`\p{Han}`).MatchString(cold) {
+		t.Errorf("prompt đồng sáng tác khởi đầu tiếng Việt còn chữ Hán")
 	}
 }
 
@@ -249,7 +271,7 @@ func TestBuildStoryStateSummaryUsesDynamicPlanningWording(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := buildStoryStateSummary(st)
+	got := buildStoryStateSummary(st, &storyStateTextZH)
 	if !strings.Contains(got, "当前已细化 2 章（后续按弧动态规划）") {
 		t.Fatalf("动态规划摘要口径错误:\n%s", got)
 	}

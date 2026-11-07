@@ -58,10 +58,10 @@ type commitArgs struct {
 
 func (t *CommitChapterTool) Name() string { return "commit_chapter" }
 func (t *CommitChapterTool) Description() string {
-	return "提交章节终稿。加载草稿正文保存为终稿，更新时间线、伏笔、关系、角色状态和进度。" +
-		"返回结构化事实：next_chapter / review_required / arc_end / volume_end / needs_expansion / book_complete / flow 等"
+	return LocalizeText(t.store, "提交章节终稿。加载草稿正文保存为终稿，更新时间线、伏笔、关系、角色状态和进度。"+
+		"返回结构化事实：next_chapter / review_required / arc_end / volume_end / needs_expansion / book_complete / flow 等")
 }
-func (t *CommitChapterTool) Label() string { return "提交章节" }
+func (t *CommitChapterTool) Label() string { return "Nộp chương" }
 
 // 写工具（跨域可恢复 Saga：完整载荷→终稿/状态→进度→checkpoint），禁止并发。
 func (t *CommitChapterTool) ReadOnly(_ json.RawMessage) bool        { return false }
@@ -71,7 +71,7 @@ func (t *CommitChapterTool) StrictSchema() bool                     { return tru
 func (t *CommitChapterTool) Schema() map[string]any {
 	props := []schema.Prop{schema.Property("chapter", schema.Int("章节号")).Required()}
 	props = append(props, chapterfacts.Properties(true)...)
-	return schema.Object(props...)
+	return localizeSchema(t.store, schema.Object(props...))
 }
 
 func (t *CommitChapterTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
@@ -561,8 +561,8 @@ func (t *CommitChapterTool) previousChapters(chapter int) []string {
 }
 
 // executeRewriteCommit 处理打磨/重写章节的提交：覆盖终稿与摘要、更新字数、drain 队列。
-// 跳过所有世界状态追加（timeline / foreshadow / relationship / state_changes）与弧边界检测，
-// 这些已在章节原始提交时应用。
+// 不做增量追加与弧边界检测；章节摘要与世界状态（timeline / foreshadow / relationship /
+// state_changes）由 Projector 从全部章节记录整体重建。弧/卷摘要不在其内，由 revise_arc_summary 修订。
 func (t *CommitChapterTool) executeRewriteCommit(a commitArgs, progress *domain.Progress, pending domain.PendingCommit, recovering bool) (json.RawMessage, error) {
 	chapter := a.Chapter
 	// 1. 只使用首次提交时冻结的返工正文，崩溃恢复不得采用随后被覆盖的 draft。

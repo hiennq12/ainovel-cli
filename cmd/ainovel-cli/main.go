@@ -107,7 +107,15 @@ func runWithConfig(cfg bootstrap.Config, opts cliOptions, args []string) {
 		if err != nil {
 			die("Lỗi: %v", err)
 		}
-		if err := headless.Run(cfg, bundle, headless.Options{Prompt: prompt}); err != nil {
+		steer := ""
+		if opts.SteerFile != "" {
+			data, err := os.ReadFile(opts.SteerFile)
+			if err != nil {
+				die("Lỗi: đọc --steer-file: %v", err)
+			}
+			steer = string(data)
+		}
+		if err := headless.Run(cfg, bundle, headless.Options{Prompt: prompt, Steer: steer, Next: opts.Next}); err != nil {
 			die("Lỗi: %v", err)
 		}
 		return
@@ -127,6 +135,8 @@ type cliOptions struct {
 	Version       bool
 	Update        bool
 	UpdateVersion string
+	SteerFile     string
+	Next          bool
 }
 
 func parseCLIOptions(argv []string) (cliOptions, []string, error) {
@@ -170,12 +180,28 @@ func parseCLIOptions(argv []string) (cliOptions, []string, error) {
 			}
 			opts.PromptFile = argv[i+1]
 			i++
+		case "--steer-file":
+			if i+1 >= len(argv) {
+				return opts, nil, fmt.Errorf("--steer-file thiếu giá trị")
+			}
+			opts.SteerFile = argv[i+1]
+			i++
+		case "--next":
+			opts.Next = true
 		default:
 			args = append(args, argv[i])
 		}
 	}
 	if opts.Prompt != "" && opts.PromptFile != "" {
 		return opts, nil, fmt.Errorf("--prompt và --prompt-file không thể dùng đồng thời")
+	}
+	if opts.SteerFile != "" || opts.Next {
+		if !opts.Headless {
+			return opts, nil, fmt.Errorf("--steer-file / --next chỉ dùng được với --headless")
+		}
+		if opts.Prompt != "" || opts.PromptFile != "" {
+			return opts, nil, fmt.Errorf("--steer-file / --next chỉ dùng khi viết tiếp truyện đã có, không dùng chung với --prompt / --prompt-file")
+		}
 	}
 	if opts.Version && (opts.Update || opts.Headless || opts.Prompt != "" || opts.PromptFile != "" || len(args) > 0) {
 		return opts, nil, fmt.Errorf("version không thể dùng chung với các tham số khởi động khác")

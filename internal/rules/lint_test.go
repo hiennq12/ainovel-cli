@@ -22,6 +22,17 @@ func TestLint_MarkdownResidue(t *testing.T) {
 	if heading == nil || heading.Actual != 1 {
 		t.Errorf("expected 1 heading beyond first line: %+v", vs)
 	}
+	if it := findViolation(vs, "markdown_residue", "*"); it != nil {
+		t.Errorf("bold must not count as italic: %+v", it)
+	}
+}
+
+func TestLint_MarkdownItalic(t *testing.T) {
+	text := "# Chương 1\nKế hoạch *dự kiến* xong.\n*Giờ ký tốt nhất: 2 giờ sáng.*\nĐây là **đậm**, còn 3 * 4 = 12 thì không phải."
+	it := findViolation(Lint(text), "markdown_residue", "*")
+	if it == nil || it.Actual != 2 {
+		t.Errorf("expected 2 italics: %+v", it)
+	}
 }
 
 func TestLint_NonCJKFragments(t *testing.T) {

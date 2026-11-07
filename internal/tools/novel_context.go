@@ -96,20 +96,20 @@ func NewContextTool(
 
 func (t *ContextTool) Name() string { return "novel_context" }
 func (t *ContextTool) Description() string {
-	return "获取小说当前状态和创作上下文。" +
-		"不传 chapter：返回 progress_status（phase/flow/next_chapter/pending_rewrites 等进度字段）+ 基础设定，用于判断下一步该做什么。" +
-		"传 chapter=N：额外返回该章的前情摘要、伏笔、角色状态、风格规则等写作上下文"
+	return LocalizeText(t.store, "获取小说当前状态和创作上下文。"+
+		"不传 chapter：返回 progress_status（phase/flow/next_chapter/pending_rewrites 等进度字段）+ 基础设定，用于判断下一步该做什么。"+
+		"传 chapter=N：额外返回该章的前情摘要、伏笔、角色状态、风格规则等写作上下文")
 }
-func (t *ContextTool) Label() string { return "加载上下文" }
+func (t *ContextTool) Label() string { return "Nạp ngữ cảnh" }
 
 // 纯读工具，可被并发调度。
 func (t *ContextTool) ReadOnly(_ json.RawMessage) bool        { return true }
 func (t *ContextTool) ConcurrencySafe(_ json.RawMessage) bool { return true }
 
 func (t *ContextTool) Schema() map[string]any {
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("chapter", schema.Int("章节号。不传则返回进度状态和基础设定（Architect 用）；传入则额外返回该章的写作上下文（Writer/Editor 用）")),
-	)
+	))
 }
 
 func (t *ContextTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {
@@ -166,10 +166,9 @@ func (t *ContextTool) Execute(_ context.Context, args json.RawMessage) (json.Raw
 
 	// 优先级预算：总大小超过阈值时裁剪低优先级数据；摘要在裁剪完成后重建，
 	// 确保展示的字段数量和 _trimmed 与最终 payload 一致。
-	budget := 60 * 1024
-	if a.Chapter > 0 {
-		budget = 100 * 1024
-	}
+	// Bản Việt: 60KB gốc tính theo tiếng Trung; cùng nội dung tiếng Việt tốn byte hơn hẳn,
+	// đại cương phân tầng lại lớn dần theo cung, nên hai đường dùng chung 100KB.
+	budget := 100 * 1024
 	return finalizeContextPayload(result, a.Chapter, budget, text)
 }
 
@@ -530,7 +529,7 @@ func (t *ContextTool) foundationStatus() (map[string]any, error) {
 }
 
 // trimByBudget 按优先级裁剪 result，使 JSON 总大小不超过 budget 字节。
-// 优先级（从低到高）：references < voice_samples < style_anchors < previous_tail < timeline
+// 优先级（从低到高）：premise_sections < references < voice_samples < style_anchors < previous_tail < timeline
 //
 //	< recent_state_changes < foreshadow_ledger < relationship_state < 其余（不裁剪）
 //
@@ -549,6 +548,7 @@ func trimByBudget(result map[string]any, budget int) error {
 
 	// 按优先级从低到高列出可裁剪的 key
 	trimOrder := []string{
+		"premise_sections", // bản tách mục của premise, nguyên văn vẫn còn nên cắt không mất gì
 		"references",
 		"voice_samples",
 		"style_anchors",

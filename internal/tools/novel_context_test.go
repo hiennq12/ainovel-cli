@@ -549,6 +549,29 @@ func TestTrimByBudgetKeepsStyleStats(t *testing.T) {
 	}
 }
 
+func TestTrimByBudgetDropsPremiseSectionsFirst(t *testing.T) {
+	result := map[string]any{
+		"foundation_memory": map[string]any{
+			"premise":          strings.Repeat("p", 100),
+			"premise_sections": map[string]string{"a": strings.Repeat("s", 100)},
+		},
+		"reference_pack": map[string]any{"references": "r"},
+	}
+	if err := trimByBudget(result, 210); err != nil {
+		t.Fatal(err)
+	}
+	foundation := result["foundation_memory"].(map[string]any)
+	if _, ok := foundation["premise_sections"]; ok {
+		t.Fatal("premise_sections should be trimmed first")
+	}
+	if _, ok := foundation["premise"]; !ok {
+		t.Fatal("premise must remain")
+	}
+	if _, ok := result["reference_pack"].(map[string]any)["references"]; !ok {
+		t.Fatal("references should survive when dropping premise_sections is enough")
+	}
+}
+
 func TestTrimByBudgetRejectsUntrimmablePayload(t *testing.T) {
 	result := map[string]any{"required": strings.Repeat("x", 500)}
 	if err := trimByBudget(result, 100); err == nil || !strings.Contains(err.Error(), "exceeds budget") {

@@ -3,6 +3,7 @@ package tools
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 
 	"github.com/voocel/ainovel-cli/internal/domain"
@@ -186,5 +187,76 @@ func TestReviseOutlinePreservesOtherLayeredArcs(t *testing.T) {
 	}
 	if progress.TotalChapters != 4 {
 		t.Fatalf("TotalChapters = %d, want 4", progress.TotalChapters)
+	}
+}
+
+func TestReviseOutlineRejectsOversizedLayeredArc(t *testing.T) {
+	s := store.NewStore(t.TempDir())
+	if err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	volumes := []domain.VolumeOutline{{Index: 1, Title: "卷一", Arcs: []domain.ArcOutline{
+		{Index: 1, Title: "弧一", Chapters: []domain.OutlineEntry{{Chapter: 1, Title: "已完成"}, {Chapter: 2, Title: "旧二"}}},
+	}}}
+	if err := s.Progress.Init(2); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Progress.SetLayered(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Outline.SaveLayeredOutline(volumes); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Outline.SaveOutline(domain.FlattenOutline(volumes)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Progress.MarkChapterComplete(1, 100, "", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	entries := make([]string, 8)
+	for i := range entries {
+		entries[i] = `{"title":"新","core_event":"事","hook":"钩","scenes":[]}`
+	}
+	args := json.RawMessage(`{"from_chapter":2,"replacement":[` + strings.Join(entries, ",") + `],"reason":"塞进后续弧"}`)
+	if _, err := NewReviseOutlineTool(s).Execute(context.Background(), args); err == nil {
+		t.Fatal("9 章的弧应被拒绝")
+	}
+	layered, err := s.Outline.LoadLayeredOutline()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := layered[0].Arcs[0].Chapters; len(got) != 2 || got[1].Title != "旧二" {
+		t.Fatalf("rejected revision changed arc: %+v", got)
+	}
+}
+
+func TestReviseOutlineRejectsReplacementRepeatingWrittenChapter(t *testing.T) {
+	s := store.NewStore(t.TempDir())
+	if err := s.Init(); err != nil {
+		t.Fatal(err)
+	}
+	volumes := []domain.VolumeOutline{{Index: 1, Title: "卷一", Arcs: []domain.ArcOutline{
+		{Index: 1, Title: "弧一", Chapters: []domain.OutlineEntry{{Chapter: 1, Title: "十四天"}, {Chapter: 2, Title: "断线"}}},
+	}}}
+	if err := s.Progress.Init(2); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Progress.SetLayered(true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Outline.SaveLayeredOutline(volumes); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Outline.SaveOutline(domain.FlattenOutline(volumes)); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.Progress.MarkChapterComplete(1, 100, "", ""); err != nil {
+		t.Fatal(err)
+	}
+
+	args := json.RawMessage(`{"from_chapter":2,"replacement":[{"title":"十四天","core_event":"事","hook":"钩","scenes":[]},{"title":"断线","core_event":"事","hook":"钩","scenes":[]}],"reason":"误把已写章节放进来"}`)
+	if _, err := NewReviseOutlineTool(s).Execute(context.Background(), args); err == nil || !strings.Contains(err.Error(), "第 1 章同名") {
+		t.Fatalf("应拒绝重复已写章节, err=%v", err)
 	}
 }

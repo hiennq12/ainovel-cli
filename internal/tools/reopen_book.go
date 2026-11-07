@@ -26,12 +26,12 @@ func NewReopenBookTool(s *store.Store) *ReopenBookTool {
 }
 
 func (t *ReopenBookTool) Name() string  { return "reopen_book" }
-func (t *ReopenBookTool) Label() string { return "重开返工" }
+func (t *ReopenBookTool) Label() string { return "Mở lại để viết lại" }
 
 func (t *ReopenBookTool) Description() string {
-	return "把已完结（phase=complete）的全书重新打开进入返工态，用于用户在完本后要求重写/打磨某几章。" +
-		"chapters 是要返工的已完成章节号；调用后这些章进入重写队列，Host 会逐章派 writer 重写，全部改完自动重新完结。" +
-		"仅在全书已完结、且用户明确要求修改已写章节时使用；用户要新增剧情/扩展篇幅不属返工，不要用本工具。"
+	return LocalizeText(t.store, "把已完结（phase=complete）的全书重新打开进入返工态，用于用户在完本后要求重写/打磨某几章。"+
+		"chapters 是要返工的已完成章节号；调用后这些章进入重写队列，Host 会逐章派 writer 重写，全部改完自动重新完结。"+
+		"仅在全书已完结、且用户明确要求修改已写章节时使用；用户要新增剧情/扩展篇幅不属返工，不要用本工具。")
 }
 
 // 写工具，禁止并发。
@@ -43,10 +43,10 @@ func (t *ReopenBookTool) ActivityDescription(_ json.RawMessage) string {
 }
 
 func (t *ReopenBookTool) Schema() map[string]any {
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("chapters", schema.Array("要返工的已完成章节号列表（至少一章）", schema.Int(""))).Required(),
 		schema.Property("reason", schema.String("返工原因（可选，如\"清理特殊字符\"）")),
-	)
+	))
 }
 
 func (t *ReopenBookTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {

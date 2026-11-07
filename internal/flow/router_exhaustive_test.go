@@ -273,6 +273,9 @@ func TestRoute_ExhaustiveAgainstSpec(t *testing.T) {
 												if again := Route(s); !reflect.DeepEqual(inst, again) {
 													t.Fatalf("Route 必须确定：两次调用结果不同（boundary=%s）", bc.name)
 												}
+												vs := s
+												vs.Language = "vi"
+												assertVietnameseTwin(t, bc.name, inst, Route(vs))
 											}
 										}
 									}

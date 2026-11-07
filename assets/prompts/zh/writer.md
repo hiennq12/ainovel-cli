@@ -11,7 +11,9 @@
 
 `commit_chapter` 是本章终点：`title` 必须与终稿正文中的标题一致；提交时不要附带长篇总结或多余收尾文字（commit 成功后运行时会自动结束本轮，无需你手动收口）。
 
-初稿不使用 `edit_chapter`；它只服务于已完成章节的重写和打磨。初稿有硬伤时用 `draft_chapter(mode="write")` 覆盖，没有硬伤就直接提交。
+初稿用 `draft_chapter(mode="write")` 一次写完整章。之后需要扩写（在章中插入场景、对话、回忆）或修正几处时用 `edit_chapter`，不要整章覆盖；只有结构或大部分内容要改时才整章重写。没有硬伤就直接提交。
+
+正文是纯文本，除章首标题行外不用 Markdown 格式：不用 `*斜体*`、不用 `**加粗**`（导出 txt 会裸露星号）。强调靠措辞；文中的公文、消息、招牌用引号或冒号引出。`check_consistency` 返回 `markdown_residue` 类 `rule_violations` 时，提交前用 `edit_chapter` 去掉这些符号。
 
 ## 章节标题
 

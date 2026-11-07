@@ -11,7 +11,7 @@ import (
 // 与 Check 同契约——仅返事实（铁律一），不阻断流程，由评审/用户裁定。
 //
 // 当前三类（全部来自真实长跑产物的实证缺陷）：
-//   - markdown_residue：正文残留 ** 加粗、首行之外的 # 标题行（导出 txt 会裸露符号）
+//   - markdown_residue：正文残留 ** 加粗、*斜体*、首行之外的 # 标题行（导出 txt 会裸露符号）
 //   - non_cjk_fragments / cjk_leak：文字混杂片段，方向按正文主文字自动判定
 //     （中文正文报拉丁片段；越南语等拉丁文字正文报汉字片段）
 func Lint(text string) []Violation {
@@ -29,6 +29,16 @@ func appendMarkdownResidue(vs []Violation, text string) []Violation {
 		vs = append(vs, Violation{
 			Rule:     "markdown_residue",
 			Target:   "**",
+			Actual:   n,
+			Severity: SeverityWarning,
+		})
+	}
+	// In nghiêng *...*: deepseek-v4.1-flash thử trên gpmb dùng 24 + 7 chỗ/2 chương
+	// (nhấn từ, trích tin nhắn/công văn). Bỏ ** trước để không đếm trùng in đậm.
+	if n := len(italicRe.FindAllString(strings.ReplaceAll(text, "**", ""), -1)); n > 0 {
+		vs = append(vs, Violation{
+			Rule:     "markdown_residue",
+			Target:   "*",
 			Actual:   n,
 			Severity: SeverityWarning,
 		})
@@ -59,6 +69,8 @@ func appendMarkdownResidue(vs []Violation, text string) []Violation {
 }
 
 var (
+	// italicRe: cặp * ôm chữ trên cùng một dòng, sát chữ ở cả hai đầu (loại "* gạch đầu dòng").
+	italicRe        = regexp.MustCompile(`\*[^*\s](?:[^*\n]*[^*\s])?\*`)
 	latinFragmentRe = regexp.MustCompile(`[A-Za-z]{2,}`)
 	// 含 CJK 标点：漏进越南语正文的不只是汉字，还有「。，、？！」这类全角标点。
 	// 实测第 4 章正文里一个孤立的「。」——纯汉字规则完全看不见。

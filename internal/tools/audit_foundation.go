@@ -25,10 +25,10 @@ func NewAuditFoundationTool(store *store.Store) *AuditFoundationTool {
 
 func (t *AuditFoundationTool) Name() string { return "audit_foundation" }
 func (t *AuditFoundationTool) Description() string {
-	return "审查已落盘的 book、premise、outline、characters、world_rules 与 compass 是否语义一致。" +
-		"必须先重新调用 novel_context，并原样传入 foundation_status.fingerprint。"
+	return LocalizeText(t.store, "审查已落盘的 book、premise、outline、characters、world_rules 与 compass 是否语义一致。"+
+		"必须先重新调用 novel_context，并原样传入 foundation_status.fingerprint。")
 }
-func (t *AuditFoundationTool) Label() string                          { return "审查设定" }
+func (t *AuditFoundationTool) Label() string                          { return "Thẩm định thiết lập" }
 func (t *AuditFoundationTool) ReadOnly(_ json.RawMessage) bool        { return false }
 func (t *AuditFoundationTool) ConcurrencySafe(_ json.RawMessage) bool { return false }
 func (t *AuditFoundationTool) StrictSchema() bool                     { return true }
@@ -40,12 +40,12 @@ func (t *AuditFoundationTool) Schema() map[string]any {
 		schema.Property("evidence", schema.String("来自已落盘内容的具体冲突证据")).Required(),
 		schema.Property("suggestion", llmcontract.Nullable(schema.String("推荐修改方向；无需建议时为 null"))).Required(),
 	)
-	return schema.Object(
+	return localizeSchema(t.store, schema.Object(
 		schema.Property("fingerprint", schema.String("novel_context 返回的 foundation_status.fingerprint")).Required(),
 		schema.Property("ready", schema.Bool("所有基础设定是否已语义一致，可以进入写作")).Required(),
 		schema.Property("summary", schema.String("审查结论摘要")).Required(),
 		schema.Property("issues", schema.Array("发现的跨文件语义问题；ready=true 时为空数组", issue)).Required(),
-	)
+	))
 }
 
 func (t *AuditFoundationTool) Execute(_ context.Context, args json.RawMessage) (json.RawMessage, error) {

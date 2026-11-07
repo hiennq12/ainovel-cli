@@ -81,18 +81,18 @@ func (g *ChapterAdvanceGate) handleHold(hold domain.AdvanceHold) bool {
 		if err := g.store.RunMeta.ClearAdvanceHold(hold); err != nil {
 			return g.fail(fmt.Errorf("消费一次性暂停: %w", err))
 		}
-		g.reportEvent("info", withAdvanceReason("全书已完结，一次性暂停意图已解除", hold.Reason))
+		g.reportEvent("info", withAdvanceReason("Toàn truyện đã hoàn thành, đã huỷ ý định tạm dừng một lần", hold.Reason))
 		return false
 	case flow.AdvanceHoldConsumeAndStop:
 		if err := g.store.RunMeta.ClearAdvanceHold(hold); err != nil {
 			return g.fail(fmt.Errorf("消费一次性暂停: %w", err))
 		}
-		msg := "已按用户要求在当前工作边界暂停"
+		msg := "Đã tạm dừng ở ranh giới công việc hiện tại theo yêu cầu"
 		switch hold.After {
 		case domain.AdvanceHoldAfterRewritesDrained:
-			msg = "返工队列已排空，已暂停等待验收"
+			msg = "Hàng chờ viết lại đã trống, đã tạm dừng chờ nghiệm thu"
 		case domain.AdvanceHoldAtChapter:
-			msg = fmt.Sprintf("已写到第 %d 章，按用户要求暂停", hold.TargetChapter)
+			msg = fmt.Sprintf("Đã viết tới chương %d, tạm dừng theo yêu cầu", hold.TargetChapter)
 		}
 		g.pauseNow(withAdvanceReason(msg, hold.Reason))
 		return true
@@ -204,16 +204,16 @@ func (g *ChapterAdvanceGate) Allow(inst *flow.Instruction) (bool, error) {
 		return true, nil
 	}
 	latest := progress.LatestCompleted()
-	message := fmt.Sprintf("已完成至第 %d 章，逐章验收等待放行第 %d 章；使用 /next 生成，或输入修改意见", latest, target)
+	message := fmt.Sprintf("Đã hoàn thành tới chương %d; nghiệm thu từng chương: chờ cho phép viết chương %d. Dùng /next để viết, hoặc nhập ý kiến sửa", latest, target)
 	if latest == 0 {
-		message = fmt.Sprintf("规划已就绪，逐章验收等待放行第 %d 章；使用 /next 生成，或输入修改意见", target)
+		message = fmt.Sprintf("Quy hoạch đã sẵn sàng; nghiệm thu từng chương: chờ cho phép viết chương %d. Dùng /next để viết, hoặc nhập ý kiến sửa", target)
 	}
 	g.pauseNow(message)
 	return false, nil
 }
 
 func (g *ChapterAdvanceGate) fail(err error) bool {
-	g.pauseNow("章节推进控制错误，已暂停：" + err.Error())
+	g.pauseNow("Lỗi điều khiển tiến độ chương, đã tạm dừng: " + err.Error())
 	return true
 }
 
@@ -235,5 +235,5 @@ func withAdvanceReason(msg, reason string) string {
 	if reason == "" {
 		return msg
 	}
-	return msg + "（诉求：" + reason + "）"
+	return msg + " (yêu cầu: " + reason + ")"
 }

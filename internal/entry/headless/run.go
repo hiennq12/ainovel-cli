@@ -17,6 +17,8 @@ import (
 
 type Options struct {
 	Prompt string
+	Steer  string // 仅恢复模式：暂停后送入的干预（同 TUI 停机时输入）
+	Next   bool   // 仅恢复模式：暂停后授权下一章（同 /next）
 	Stdout io.Writer
 	Stderr io.Writer
 }
@@ -73,11 +75,34 @@ func Run(cfg bootstrap.Config, bundle assets.Bundle, opts Options) error {
 		if err != nil {
 			return err
 		}
-		if label == "" {
+		// 完本期 Resume 返回空 label；带 --steer-file 时仍可送干预（Arbiter 用 reopen 返工）。
+		if label == "" && strings.TrimSpace(opts.Steer) == "" {
 			return fmt.Errorf("headless 模式需要 --prompt，或输出目录 %q 下已有可恢复会话", eng.Dir())
 		}
-		fmt.Fprintf(stderr, "headless 恢复: %s (%s)\n", eng.Dir(), label)
-		return consume(eng, stdout, stderr, false)
+		if label != "" {
+			fmt.Fprintf(stderr, "headless 恢复: %s (%s)\n", eng.Dir(), label)
+			if err := consume(eng, stdout, stderr, false); err != nil {
+				return err
+			}
+		}
+		// 与 TUI 同序：恢复跑到闸门暂停后，再送停机期干预（Continue）或 /next 许可，
+		// 各自跑到下一次暂停为止。供外部脚本驱动"写一章 → 审 → 干预"循环。
+		if steer := strings.TrimSpace(opts.Steer); steer != "" {
+			fmt.Fprintf(stderr, "headless 干预: %s\n", steer)
+			if err := eng.Continue(steer); err != nil {
+				return err
+			}
+			if err := consume(eng, stdout, stderr, false); err != nil {
+				return err
+			}
+		}
+		if opts.Next {
+			if err := eng.AdvanceOneChapter(); err != nil {
+				return err
+			}
+			return consume(eng, stdout, stderr, false)
+		}
+		return nil
 	}
 
 	return consume(eng, stdout, stderr, false)
