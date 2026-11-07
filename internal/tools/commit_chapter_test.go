@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -572,6 +573,67 @@ func TestCommitChapterClearsInvalidLegacyRewritePending(t *testing.T) {
 	record, err := s.ChapterRecords.Load(2)
 	if err != nil || record == nil || record.Revision != 1 || record.Content != oldContent {
 		t.Fatalf("clearing pending changed chapter record: %+v err=%v", record, err)
+	}
+}
+
+// A resubmission differing from the final only by its heading is rejected as unchanged.
+// It must not stay frozen, or the next real draft is replaced by the old text as a "recovery".
+func TestCommitChapterRewriteRejectedDraftDoesNotFreeze(t *testing.T) {
+	s := store.NewStore(t.TempDir())
+	if err := s.Init(); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+	if err := s.Progress.Init(6); err != nil {
+		t.Fatalf("InitProgress: %v", err)
+	}
+	if err := s.Progress.UpdatePhase(domain.PhaseWriting); err != nil {
+		t.Fatalf("UpdatePhase: %v", err)
+	}
+	if err := s.Drafts.SaveFinalChapter(1, "# Tiêu đề\n\nOLD"); err != nil {
+		t.Fatalf("SaveFinalChapter: %v", err)
+	}
+	if err := s.Summaries.SaveSummary(domain.ChapterSummary{Chapter: 1, Title: "Tiêu đề", Summary: "s"}); err != nil {
+		t.Fatalf("SaveSummary: %v", err)
+	}
+	if err := s.Progress.MarkChapterComplete(1, 100, "", ""); err != nil {
+		t.Fatalf("MarkChapterComplete: %v", err)
+	}
+	if err := s.Progress.SetPendingRewrites([]int{1}, "quá ngắn"); err != nil {
+		t.Fatalf("SetPendingRewrites: %v", err)
+	}
+	if err := s.Progress.SetFlow(domain.FlowRewriting); err != nil {
+		t.Fatalf("SetFlow: %v", err)
+	}
+	args, err := json.Marshal(map[string]any{
+		"chapter": 1, "title": "Tiêu đề", "summary": "s", "characters": []string{"A"}, "key_events": []string{"e"},
+	})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	tool := newTestCommitChapterTool(s)
+
+	if err := s.Drafts.SaveDraft(1, "Chương 1: Tiêu đề\n\nOLD"); err != nil {
+		t.Fatalf("SaveDraft: %v", err)
+	}
+	if _, err := tool.Execute(context.Background(), args); !errors.Is(err, errs.ErrToolPrecondition) {
+		t.Fatalf("unchanged resubmission: got %v, want ErrToolPrecondition", err)
+	}
+	if pending, err := s.Signals.LoadPendingCommit(); err != nil || pending != nil {
+		t.Fatalf("rejected draft stayed frozen: pending=%+v err=%v", pending, err)
+	}
+
+	if err := s.Drafts.SaveDraft(1, "Chương 1: Tiêu đề\n\nNEW"); err != nil {
+		t.Fatalf("SaveDraft: %v", err)
+	}
+	if _, err := tool.Execute(context.Background(), args); err != nil {
+		t.Fatalf("real rewrite: %v", err)
+	}
+	final, err := s.Drafts.LoadChapterText(1)
+	if err != nil {
+		t.Fatalf("LoadChapterText: %v", err)
+	}
+	if final != "# Tiêu đề\n\nNEW" {
+		t.Fatalf("rewrite saved the wrong text: %q", final)
 	}
 }
 

@@ -584,8 +584,14 @@ func (t *CommitChapterTool) executeRewriteCommit(a commitArgs, progress *domain.
 			if progress != nil && progress.Flow == domain.FlowPolishing {
 				mode = "打磨"
 			}
-			return nil, fmt.Errorf("第 %d 章正文和标题均未发生变化，未检测到%s改动: %w",
+			// 这份载荷已被判定为无改动，不能留作冻结提交：否则下次提交会被当作崩溃恢复，
+			// 用旧正文覆盖 Writer 新写的草稿。
+			rejected := fmt.Errorf("第 %d 章正文和标题均未发生变化，未检测到%s改动: %w",
 				chapter, mode, errs.ErrToolPrecondition)
+			if clearErr := t.store.Signals.ClearPendingCommit(); clearErr != nil {
+				return nil, fmt.Errorf("返工提交校验失败（%v），且清理冻结提交失败: %w: %w", rejected, errs.ErrStoreWrite, clearErr)
+			}
+			return nil, rejected
 		}
 	}
 
