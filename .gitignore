@@ -54,3 +54,6 @@ config/
 scratch/
 config-laptop/
 workspace-laptop/
+
+# Local API keys for manual testing, never commit
+assets/testdata/api_test.txt
